@@ -60,11 +60,9 @@ impl Index {
         let tx = self.conn.transaction()?;
 
         let known: Option<(i64, i64)> = tx
-            .query_row(
-                "SELECT id, indexed_offset FROM files WHERE path = ?1",
-                [&path],
-                |row| Ok((row.get(0)?, row.get(1)?)),
-            )
+            .query_row("SELECT id, indexed_offset FROM files WHERE path = ?1", [&path], |row| {
+                Ok((row.get(0)?, row.get(1)?))
+            })
             .optional()?;
 
         let (file_id, start, rebuilt) = match known {

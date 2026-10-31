@@ -28,10 +28,7 @@ enum Command {
     /// Tier 1: list every session using file metadata plus head/tail reads.
     Discover,
     /// Tier 2: parse one session file in memory.
-    Open {
-        agent: AgentKind,
-        path: PathBuf,
-    },
+    Open { agent: AgentKind, path: PathBuf },
     /// Tier 3: build or incrementally refresh the full-text index.
     Index {
         #[arg(long, default_value = "agenteye-spike.db")]
@@ -149,7 +146,13 @@ fn search(db: &Path, limit: usize, query: &str) -> Result<()> {
 
     println!("{} hits in {}", hits.len(), millis(elapsed));
     for hit in &hits {
-        println!("  [{}] {}  @{}\n      {}", hit.agent, hit.path.display(), hit.byte_offset, hit.snippet);
+        println!(
+            "  [{}] {}  @{}\n      {}",
+            hit.agent,
+            hit.path.display(),
+            hit.byte_offset,
+            hit.snippet
+        );
     }
     Ok(())
 }
