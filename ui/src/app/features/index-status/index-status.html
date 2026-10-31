@@ -4,7 +4,7 @@
       Indexing{{ percent() === null ? '' : ' ' + percent() + '%' }}…
     }
     @case ('failed') {
-      <span class="text-danger">Indexing failed</span>
+      <span class="text-danger">Indexing failed: {{ failureMessage() }}</span>
     }
     @default {
       Search index ready

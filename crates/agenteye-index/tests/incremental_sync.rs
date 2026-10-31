@@ -94,3 +94,66 @@ fn read_only_open_fails_for_a_missing_database() {
     let dir = tempfile::tempdir().unwrap();
     assert!(Index::open_read_only(dir.path().join("typo.db")).is_err());
 }
+
+#[test]
+fn rebuilds_when_a_shorter_file_replaces_one_with_an_unfinished_last_line() {
+    let dir = tempfile::tempdir().unwrap();
+    let project = dir.path().join("proj");
+    fs::create_dir_all(&project).unwrap();
+    let session = project.join("s1.jsonl");
+    // The unfinished tail is skipped, so the stored offset stops before it.
+    fs::write(&session, format!("{}{}", user_line("alpha one"), "x".repeat(40))).unwrap();
+
+    let source = ClaudeSource::new(dir.path());
+    let mut index = Index::open_in_memory().unwrap();
+    index.sync_file(&source, &current(&source)).unwrap();
+    assert_eq!(index.search("alpha", 10).unwrap().len(), 1);
+
+    // Shorter than the original file but longer than the stored offset.
+    fs::write(&session, user_line("beta beta beta beta")).unwrap();
+    let outcome = index.sync_file(&source, &current(&source)).unwrap();
+
+    assert!(outcome.rebuilt);
+    assert_eq!(index.search("alpha", 10).unwrap(), Vec::new());
+    assert_eq!(index.search("beta", 10).unwrap().len(), 1);
+}
+
+#[test]
+fn prune_removes_sessions_deleted_from_disk_and_keeps_the_rest() {
+    let dir = tempfile::tempdir().unwrap();
+    let project = dir.path().join("proj");
+    fs::create_dir_all(&project).unwrap();
+    fs::write(project.join("gone.jsonl"), user_line("secret plans")).unwrap();
+    fs::write(project.join("kept.jsonl"), user_line("public notes")).unwrap();
+
+    let source = ClaudeSource::new(dir.path());
+    let mut index = Index::open_in_memory().unwrap();
+    for file in source.discover().unwrap() {
+        index.sync_file(&source, &file).unwrap();
+    }
+
+    fs::remove_file(project.join("gone.jsonl")).unwrap();
+
+    assert_eq!(index.prune_deleted().unwrap(), 1);
+    assert_eq!(index.search("secret", 10).unwrap(), Vec::new());
+    assert_eq!(index.search("public", 10).unwrap().len(), 1);
+    assert_eq!(index.prune_deleted().unwrap(), 0);
+}
+
+#[test]
+fn prune_keeps_entries_when_the_whole_folder_is_missing() {
+    let dir = tempfile::tempdir().unwrap();
+    let project = dir.path().join("proj");
+    fs::create_dir_all(&project).unwrap();
+    fs::write(project.join("s1.jsonl"), user_line("unmounted drive")).unwrap();
+
+    let source = ClaudeSource::new(dir.path());
+    let mut index = Index::open_in_memory().unwrap();
+    index.sync_file(&source, &current(&source)).unwrap();
+
+    // The folder vanishing (an unmounted drive) is not proof the session was deleted.
+    fs::remove_dir_all(&project).unwrap();
+
+    assert_eq!(index.prune_deleted().unwrap(), 0);
+    assert_eq!(index.search("unmounted", 10).unwrap().len(), 1);
+}

@@ -45,6 +45,8 @@ export class SearchService {
       }
     } catch (error) {
       if (request === this.latestRequest) {
+        // The old hits belong to an earlier query; showing them under the new one would mislead.
+        this.hitsState.set([]);
         this.errorState.set(String(error));
       }
     } finally {

@@ -30,10 +30,12 @@ $ErrorActionPreference = 'Stop'
 [string]$bundleRoot = Join-Path $repositoryRoot 'target/release/bundle'
 
 # Folder under bundle/, file pattern, and the suffix after the platform in the final name.
-$formats = switch ($Platform) {
-    'windows-x64' { @(, @('nsis', '*-setup.exe', '-setup.exe')) }
-    'linux-x64' { @(@('deb', '*.deb', '.deb'), @('appimage', '*.AppImage', '.AppImage')) }
-}
+# The outer @() matters: PowerShell unwraps a single result on assignment, which would turn
+# Windows' one format into a flat list of three strings instead of one folder/pattern/suffix entry.
+$formats = @(switch ($Platform) {
+        'windows-x64' { , @('nsis', '*-setup.exe', '-setup.exe') }
+        'linux-x64' { @('deb', '*.deb', '.deb'), @('appimage', '*.AppImage', '.AppImage') }
+    })
 
 New-Item -ItemType Directory -Force -Path $OutputDirectory | Out-Null
 

@@ -69,4 +69,19 @@ describe('SearchService', () => {
     expect(service.error()).toContain('index not ready');
     expect(service.loading()).toBeFalse();
   });
+
+  it('drops the previous results when a newer query fails', async () => {
+    let fail = false;
+    const { service } = setup({
+      search: () => (fail ? new Error('index busy') : [hit('a')]),
+    });
+    await service.search('first');
+    expect(service.hitCount()).toBe(1);
+
+    fail = true;
+    await service.search('second');
+
+    expect(service.error()).toContain('index busy');
+    expect(service.hitCount()).toBe(0);
+  });
 });

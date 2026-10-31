@@ -22,13 +22,24 @@ param(
 
 $ErrorActionPreference = 'Stop'
 
-git fetch --tags --force --quiet
+# $ErrorActionPreference does not stop on a failing native command, so check its exit code. A failed
+# listing would otherwise look like "no releases", and every candidate would be deleted as an orphan.
+function Invoke-Native([string]$Command, [string[]]$Arguments) {
+    $output = & $Command @Arguments
+    if ($LASTEXITCODE -ne 0) {
+        throw "$Command $($Arguments -join ' ') failed with exit code $LASTEXITCODE."
+    }
+
+    $output
+}
+
+Invoke-Native git @('fetch', '--tags', '--force', '--quiet')
 
 [string]$pattern = "^$([regex]::Escape($BaseVersion))-rc\.(\d+)$"
-[string[]]$tags = @(git tag --list "$BaseVersion-rc.*" | Where-Object { $_ -match $pattern })
+[string[]]$tags = @(Invoke-Native git @('tag', '--list', "$BaseVersion-rc.*") | Where-Object { $_ -match $pattern })
 function Get-CandidateNumber([string]$Tag) { [int][regex]::Match($Tag, $pattern).Groups[1].Value }
 
-[string[]]$releasedTags = @(gh release list --limit 200 --json tagName --jq '.[].tagName')
+[string[]]$releasedTags = @(Invoke-Native gh @('release', 'list', '--limit', '200', '--json', 'tagName', '--jq', '.[].tagName'))
 [string[]]$orphaned = @($tags | Where-Object { $releasedTags -notcontains $_ })
 [string[]]$stale = @(
     $tags | Where-Object { $releasedTags -contains $_ } |
@@ -37,7 +48,7 @@ function Get-CandidateNumber([string]$Tag) { [int][regex]::Match($Tag, $pattern)
 ) + $orphaned
 
 # A draft left by a failed run has no tag; it would be replaced when its number is reused, but do not leave it around.
-[string[]]$drafts = @(gh release list --limit 200 --json tagName,isDraft --jq '.[] | select(.isDraft) | .tagName' | Where-Object { $_ -match $pattern })
+[string[]]$drafts = @(Invoke-Native gh @('release', 'list', '--limit', '200', '--json', 'tagName,isDraft', '--jq', '.[] | select(.isDraft) | .tagName') | Where-Object { $_ -match $pattern })
 foreach ($draft in $drafts) {
     Write-Host "Removing unpublished draft $draft"
     gh release delete $draft --yes

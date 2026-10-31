@@ -20,6 +20,8 @@ pub struct SyncSummary {
     pub files_total: usize,
     /// Files that could not be indexed (unreadable, vanished mid-sync, ...). They are skipped.
     pub files_failed: usize,
+    /// Index entries dropped because their session file was deleted from disk.
+    pub files_removed: usize,
     pub messages_added: usize,
     pub bytes_scanned: u64,
 }
@@ -27,7 +29,8 @@ pub struct SyncSummary {
 /// Brings `index` up to date with every session the catalog can see.
 ///
 /// Newest sessions go first so recent work becomes searchable soonest. One bad file never stops
-/// the run; it is logged and counted in [`SyncSummary::files_failed`].
+/// the run; it is logged and counted in [`SyncSummary::files_failed`]. Afterwards, entries for
+/// sessions deleted from disk are removed so their text stops appearing in search.
 pub(crate) fn sync_all(
     index: &mut Index,
     catalog: &Catalog,
@@ -57,6 +60,11 @@ pub(crate) fn sync_all(
         progress.files_done += 1;
         progress.messages_added = summary.messages_added;
         on_progress(progress);
+    }
+
+    match index.prune_deleted() {
+        Ok(removed) => summary.files_removed = removed,
+        Err(error) => warn!(%error, "removing deleted sessions from the index failed"),
     }
     summary
 }

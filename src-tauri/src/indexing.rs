@@ -21,7 +21,7 @@ fn run(app: &AppHandle) {
     let engine = state.engine();
 
     let final_status = match engine.sync(|progress| publish(app, &state, progress.into())) {
-        Ok(_) => IndexStatus::Idle,
+        Ok(summary) => summary.into(),
         // Another sync owns the status; do not overwrite what it is reporting.
         Err(Error::AlreadySyncing) => return,
         Err(error) => IndexStatus::Failed { message: error.to_string() },
@@ -30,9 +30,12 @@ fn run(app: &AppHandle) {
 }
 
 /// Records the status (so a UI that connects late can ask for it) and notifies listeners.
+///
+/// The status is recorded first: a UI that subscribes just after the event fires then reads the
+/// new status from `index_status`, never the previous one.
 fn publish(app: &AppHandle, state: &AppState, status: IndexStatus) {
+    state.set_status(status.clone());
     // Emitting can fail only if the payload cannot be serialized or no window exists; the
     // recorded status remains available through the `index_status` command either way.
     let _ = app.emit(STATUS_EVENT, &status);
-    state.set_status(status);
 }

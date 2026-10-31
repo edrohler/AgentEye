@@ -121,10 +121,11 @@ fn index(db: &Path) -> Result<()> {
     let elapsed = started.elapsed();
 
     println!(
-        "indexed {} messages from {} files ({} failed), {} scanned in {} ({})",
+        "indexed {} messages from {} files ({} failed, {} deleted sessions removed), {} scanned in {} ({})",
         summary.messages_added,
         summary.files_total,
         summary.files_failed,
+        summary.files_removed,
         megabytes(summary.bytes_scanned),
         millis(elapsed),
         throughput(summary.bytes_scanned, elapsed),

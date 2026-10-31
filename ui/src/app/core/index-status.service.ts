@@ -17,6 +17,11 @@ export class IndexStatusService {
 
   readonly status = this.statusState.asReadonly();
   readonly isRunning = computed(() => this.statusState().state === 'running');
+  /** Why indexing failed (or only partly worked), or null when it did not. */
+  readonly failureMessage = computed(() => {
+    const status = this.statusState();
+    return status.state === 'failed' ? status.message : null;
+  });
   /** Indexing progress as 0-100, or null when nothing is running. */
   readonly percent = computed(() => {
     const status = this.statusState();
@@ -40,15 +45,23 @@ export class IndexStatusService {
   }
 
   private async connect(): Promise<void> {
+    let sawLiveUpdate = false;
+
     // Listen before asking for the current status, so no update falls in the gap.
-    const unlisten = await this.backend.listen<IndexStatus>(STATUS_EVENT, (status) =>
-      this.statusState.set(status),
-    );
+    const unlisten = await this.backend.listen<IndexStatus>(STATUS_EVENT, (status) => {
+      sawLiveUpdate = true;
+      this.statusState.set(status);
+    });
     if (this.destroyed) {
       unlisten();
       return;
     }
     this.unlisten = unlisten;
-    this.statusState.set(await this.backend.call<IndexStatus>('index_status'));
+
+    // The snapshot can resolve after a newer live update; in that case it is the stale one.
+    const snapshot = await this.backend.call<IndexStatus>('index_status');
+    if (!sawLiveUpdate && !this.destroyed) {
+      this.statusState.set(snapshot);
+    }
   }
 }

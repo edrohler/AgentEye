@@ -1,6 +1,6 @@
 use serde::Serialize;
 
-use crate::SyncProgress;
+use crate::{SyncProgress, SyncSummary};
 
 /// What the background indexer is doing, as shown in the UI.
 #[derive(Debug, Clone, Default, PartialEq, Eq, Serialize)]
@@ -18,6 +18,23 @@ pub enum IndexStatus {
     Failed {
         message: String,
     },
+}
+
+/// A finished sync is `Idle` only if every session was indexed; otherwise the user is told how
+/// many were not, instead of seeing "ready" for an index that has gaps.
+impl From<SyncSummary> for IndexStatus {
+    fn from(summary: SyncSummary) -> Self {
+        if summary.files_failed == 0 {
+            Self::Idle
+        } else {
+            Self::Failed {
+                message: format!(
+                    "{} of {} sessions could not be indexed",
+                    summary.files_failed, summary.files_total
+                ),
+            }
+        }
+    }
 }
 
 impl From<SyncProgress> for IndexStatus {
@@ -43,5 +60,17 @@ mod tests {
             r#"{"state":"running","filesDone":3,"filesTotal":10,"messagesAdded":42}"#
         );
         assert_eq!(serde_json::to_string(&IndexStatus::Idle).unwrap(), r#"{"state":"idle"}"#);
+    }
+
+    #[test]
+    fn a_sync_with_failed_files_is_reported_as_failed() {
+        let clean = SyncSummary { files_total: 10, ..SyncSummary::default() };
+        assert_eq!(IndexStatus::from(clean), IndexStatus::Idle);
+
+        let partial = SyncSummary { files_total: 10, files_failed: 3, ..SyncSummary::default() };
+        assert_eq!(
+            IndexStatus::from(partial),
+            IndexStatus::Failed { message: "3 of 10 sessions could not be indexed".into() }
+        );
     }
 }

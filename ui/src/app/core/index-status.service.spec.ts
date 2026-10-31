@@ -39,6 +39,26 @@ describe('IndexStatusService', () => {
     expect(service.isRunning()).toBeFalse();
   });
 
+  it('ignores a status snapshot that arrives after a newer live update', async () => {
+    const running: IndexStatus = { state: 'running', filesDone: 1, filesTotal: 2, messagesAdded: 0 };
+    let resolveSnapshot: (status: IndexStatus) => void = () => undefined;
+    const backend = new FakeBackend();
+    backend.call = <T>() => new Promise<T>((resolve) => (resolveSnapshot = resolve as never));
+    TestBed.configureTestingModule({
+      providers: [provideZonelessChangeDetection(), backend.provide()],
+    });
+    const service = TestBed.inject(IndexStatusService);
+    await new Promise((resolve) => setTimeout(resolve));
+
+    // Indexing finishes (live event) before the earlier "running" snapshot is delivered.
+    backend.emit('index-status', { state: 'idle' });
+    resolveSnapshot(running);
+    await new Promise((resolve) => setTimeout(resolve));
+
+    expect(service.status()).toEqual({ state: 'idle' });
+    expect(service.isRunning()).toBeFalse();
+  });
+
   it('asks the backend to reindex', async () => {
     const { service, backend } = await setup({ state: 'idle' });
 

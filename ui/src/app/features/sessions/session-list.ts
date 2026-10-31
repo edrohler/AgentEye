@@ -1,14 +1,26 @@
+import {
+  CdkFixedSizeVirtualScroll,
+  CdkVirtualForOf,
+  CdkVirtualScrollViewport,
+  CdkVirtualScrollableWindow,
+} from '@angular/cdk/scrolling';
 import { DatePipe } from '@angular/common';
 import { ChangeDetectionStrategy, Component, OnInit, computed, inject, signal } from '@angular/core';
 
-import { AgentKind } from '../../core/models';
+import { AgentKind, SessionSummary } from '../../core/models';
 import { SessionService } from '../../core/session.service';
 
 type AgentFilter = AgentKind | 'all';
 
 @Component({
   selector: 'app-session-list',
-  imports: [DatePipe],
+  imports: [
+    CdkFixedSizeVirtualScroll,
+    CdkVirtualForOf,
+    CdkVirtualScrollViewport,
+    CdkVirtualScrollableWindow,
+    DatePipe,
+  ],
   templateUrl: './session-list.html',
   host: { class: 'block px-6 py-4' },
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -18,6 +30,9 @@ export class SessionList implements OnInit {
 
   protected readonly filters: readonly AgentFilter[] = ['all', 'claude', 'codex'];
   protected readonly filter = signal<AgentFilter>('all');
+
+  /** Height of one row in pixels. Virtual scrolling needs it fixed; the template sets each row to exactly this. */
+  protected readonly rowHeight = 56;
 
   protected readonly loading = this.service.loading;
   protected readonly error = this.service.error;
@@ -37,6 +52,10 @@ export class SessionList implements OnInit {
 
   protected setFilter(filter: AgentFilter): void {
     this.filter.set(filter);
+  }
+
+  protected trackByPath(_index: number, session: SessionSummary): string {
+    return session.path;
   }
 
   protected formatSize(bytes: number): string {

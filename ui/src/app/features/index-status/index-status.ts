@@ -13,6 +13,7 @@ export class IndexStatusIndicator {
   protected readonly status = this.service.status;
   protected readonly percent = this.service.percent;
   protected readonly isRunning = this.service.isRunning;
+  protected readonly failureMessage = this.service.failureMessage;
 
   protected reindex(): void {
     void this.service.reindex();

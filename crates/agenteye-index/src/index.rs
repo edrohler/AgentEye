@@ -1,3 +1,4 @@
+use std::io::ErrorKind;
 use std::path::{Path, PathBuf};
 use std::time::Duration;
 
@@ -83,19 +84,24 @@ impl Index {
         let size = to_i64(file.size_bytes);
         let tx = self.conn.transaction()?;
 
-        let known: Option<(i64, i64)> = tx
-            .query_row("SELECT id, indexed_offset FROM files WHERE path = ?1", [&path], |row| {
-                Ok((row.get(0)?, row.get(1)?))
-            })
+        let known: Option<(i64, i64, i64)> = tx
+            .query_row(
+                "SELECT id, indexed_offset, size_bytes FROM files WHERE path = ?1",
+                [&path],
+                |row| Ok((row.get(0)?, row.get(1)?, row.get(2)?)),
+            )
             .optional()?;
 
         let (file_id, start, rebuilt) = match known {
-            Some((_, offset)) if offset == size => return Ok(SyncOutcome::default()),
-            Some((id, offset)) if offset < size => (id, offset, false),
-            Some((id, _)) => {
+            // Smaller than when it was last read, so it was replaced or truncated and what we hold is
+            // stale. This compares with the stored size, not the offset: the offset stops before an
+            // unfinished last line, so a shorter replacement can still be larger than the offset.
+            Some((id, offset, stored_size)) if size < stored_size || offset > size => {
                 tx.execute("DELETE FROM messages WHERE file_id = ?1", [id])?;
                 (id, 0, true)
             }
+            Some((_, offset, _)) if offset == size => return Ok(SyncOutcome::default()),
+            Some((id, offset, _)) => (id, offset, false),
             None => {
                 tx.execute(
                     "INSERT INTO files (path, agent, size_bytes, mtime_ms, indexed_offset)
@@ -147,6 +153,34 @@ impl Index {
         })
     }
 
+    /// Removes entries for session files that were deleted from disk, with their messages, so
+    /// search never returns text from a session that no longer exists. Returns how many files
+    /// were removed.
+    ///
+    /// A file counts as deleted only if its folder still exists but the file does not. If the
+    /// folder is gone too (an unmounted drive, a moved home directory) nothing is removed, because
+    /// the files may come back and this index is only a cache.
+    pub fn prune_deleted(&mut self) -> Result<usize> {
+        let tx = self.conn.transaction()?;
+        let entries = {
+            let mut statement = tx.prepare("SELECT id, path FROM files")?;
+            let rows = statement
+                .query_map([], |row| Ok((row.get::<_, i64>(0)?, row.get::<_, String>(1)?)))?;
+            rows.collect::<rusqlite::Result<Vec<_>>>()?
+        };
+
+        let mut removed = 0;
+        for (id, path) in entries {
+            if is_confirmed_deleted(Path::new(&path)) {
+                tx.execute("DELETE FROM messages WHERE file_id = ?1", [id])?;
+                tx.execute("DELETE FROM files WHERE id = ?1", [id])?;
+                removed += 1;
+            }
+        }
+        tx.commit()?;
+        Ok(removed)
+    }
+
     /// Full-text search, best matches first. Every word in `query` must appear in a message.
     pub fn search(&self, query: &str, limit: usize) -> Result<Vec<SearchHit>> {
         let Some(fts_query) = to_fts_query(query) else {
@@ -189,6 +223,14 @@ impl Index {
         }
         Ok(hits)
     }
+}
+
+/// True only when the file's folder exists and the file is definitely not in it. Any other
+/// failure (permissions, a missing folder) is not proof of deletion.
+fn is_confirmed_deleted(path: &Path) -> bool {
+    let folder_exists = path.parent().is_some_and(Path::is_dir);
+    folder_exists
+        && matches!(std::fs::metadata(path), Err(error) if error.kind() == ErrorKind::NotFound)
 }
 
 /// SQLite integers are signed 64-bit; clamp rather than wrap for values beyond `i64::MAX`.

@@ -131,6 +131,19 @@ mod tests {
     }
 
     #[test]
+    fn sync_drops_sessions_deleted_from_disk() {
+        let (dir, engine) = engine_with_one_session("remove me later");
+        engine.sync(|_| {}).unwrap();
+        assert_eq!(engine.search("remove", 10).unwrap().len(), 1);
+
+        fs::remove_file(dir.path().join("sessions").join("proj").join("s1.jsonl")).unwrap();
+        let summary = engine.sync(|_| {}).unwrap();
+
+        assert_eq!(summary.files_removed, 1);
+        assert_eq!(engine.search("remove", 10).unwrap(), Vec::new());
+    }
+
+    #[test]
     fn search_clamps_the_limit_to_at_least_one() {
         let (_dir, engine) = engine_with_one_session("alpha beta");
         engine.sync(|_| {}).unwrap();

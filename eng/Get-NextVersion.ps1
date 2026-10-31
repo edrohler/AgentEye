@@ -24,6 +24,7 @@ $ErrorActionPreference = 'Stop'
 [version]$line = [version](Get-Content -Raw (Join-Path $repositoryRoot 'version.json') | ConvertFrom-Json).version
 
 git fetch --tags --force --quiet
+if ($LASTEXITCODE -ne 0) { throw 'git fetch --tags failed.' }
 [version[]]$released = @(
     git tag --list |
         Where-Object { $_ -match '^\d+\.\d+\.\d+$' } |
@@ -36,7 +37,9 @@ git fetch --tags --force --quiet
 $outputs = [ordered]@{ base = "$base" }
 
 if ($Candidate) {
+    # A failed listing must stop the run: treating it as "no drafts" could hand out a candidate number that is already taken.
     [string[]]$draftTags = @(gh release list --limit 200 --json tagName --jq '.[].tagName')
+    if ($LASTEXITCODE -ne 0) { throw 'gh release list failed.' }
     [int]$highest = 0
     foreach ($tag in @(git tag --list "$base-rc.*") + $draftTags) {
         if ($tag -match "^$([regex]::Escape("$base"))-rc\.(\d+)$") {

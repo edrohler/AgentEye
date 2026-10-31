@@ -40,8 +40,8 @@ describe('IndexStatusIndicator', () => {
   });
 
   it('shows a failure', async () => {
-    const { element } = await render({ state: 'failed', message: 'disk full' });
+    const { element } = await render({ state: 'failed', message: '3 of 10 sessions could not be indexed' });
 
-    expect(element.textContent).toContain('Indexing failed');
+    expect(element.textContent).toContain('Indexing failed: 3 of 10 sessions could not be indexed');
   });
 });
