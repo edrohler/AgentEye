@@ -49,14 +49,17 @@ enum Command {
 
 fn main() -> Result<()> {
     match Cli::parse().command {
-        Command::Discover => discover(),
+        Command::Discover => {
+            discover();
+            Ok(())
+        }
         Command::Open { agent, path } => open(agent, &path),
         Command::Index { db } => index(&db),
         Command::Search { db, limit, query } => search(&db, limit, &query),
     }
 }
 
-fn discover() -> Result<()> {
+fn discover() {
     let catalog = Catalog::from_env();
     let started = Instant::now();
     let files = catalog.discover();
@@ -82,7 +85,6 @@ fn discover() -> Result<()> {
             session.path.display()
         );
     }
-    Ok(())
 }
 
 fn open(agent: AgentKind, path: &Path) -> Result<()> {
@@ -152,8 +154,14 @@ fn search(db: &Path, limit: usize, query: &str) -> Result<()> {
     Ok(())
 }
 
+/// Bytes as mebibytes for display. Precision loss above 2^52 bytes is irrelevant for a readout.
+#[allow(clippy::cast_precision_loss)]
+fn to_megabytes(bytes: u64) -> f64 {
+    bytes as f64 / (1024.0 * 1024.0)
+}
+
 fn megabytes(bytes: u64) -> String {
-    format!("{:.1} MB", bytes as f64 / (1024.0 * 1024.0))
+    format!("{:.1} MB", to_megabytes(bytes))
 }
 
 fn millis(duration: Duration) -> String {
@@ -162,5 +170,5 @@ fn millis(duration: Duration) -> String {
 
 fn throughput(bytes: u64, duration: Duration) -> String {
     let seconds = duration.as_secs_f64().max(f64::EPSILON);
-    format!("{:.0} MB/s", bytes as f64 / (1024.0 * 1024.0) / seconds)
+    format!("{:.0} MB/s", to_megabytes(bytes) / seconds)
 }

@@ -1,3 +1,5 @@
+use std::cmp::Reverse;
+
 use agenteye_core::{AgentKind, SessionFile, SessionSource, SessionSummary};
 use rayon::prelude::*;
 use tracing::warn;
@@ -27,7 +29,7 @@ impl Catalog {
     }
 
     pub fn source(&self, kind: AgentKind) -> Option<&dyn SessionSource> {
-        self.sources.iter().find(|s| s.kind() == kind).map(|s| s.as_ref())
+        self.sources.iter().find(|s| s.kind() == kind).map(Box::as_ref)
     }
 
     /// Tier 1: list session files from every source using file metadata only.
@@ -56,7 +58,7 @@ impl Catalog {
                     .ok()
             })
             .collect();
-        sessions.sort_by(|a, b| b.last_activity_ms.cmp(&a.last_activity_ms));
+        sessions.sort_by_key(|session| Reverse(session.last_activity_ms));
         sessions
     }
 }

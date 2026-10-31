@@ -5,7 +5,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::Error;
 
-/// The agents AgentEye can read sessions from.
+/// The agents `AgentEye` can read sessions from.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 #[serde(rename_all = "lowercase")]
 pub enum AgentKind {

@@ -1,0 +1,3 @@
+# Project names that clippy's `doc_markdown` lint should not ask to be put in backticks.
+# ".." keeps clippy's built-in list (GitHub, SQLite, ...).
+doc-valid-idents = ["AgentEye", "WebView2", "FTS5", ".."]

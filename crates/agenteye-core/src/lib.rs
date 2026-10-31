@@ -1,4 +1,4 @@
-//! Domain types and the [`SessionSource`] contract shared by every AgentEye crate.
+//! Domain types and the [`SessionSource`] contract shared by every `AgentEye` crate.
 //!
 //! This crate performs no I/O of its own; it only defines what an agent session looks like
 //! and what an adapter must be able to do.
