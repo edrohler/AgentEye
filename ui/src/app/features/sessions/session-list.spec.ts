@@ -3,6 +3,7 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 
 import { SessionSummary } from '../../core/models';
 import { SessionService } from '../../core/session.service';
+import { SettingsService } from '../../core/settings.service';
 import { SessionList } from './session-list';
 
 function session(agent: SessionSummary['agent'], title: string): SessionSummary {
@@ -28,47 +29,50 @@ describe('SessionList', () => {
         provideZonelessChangeDetection(),
         {
           provide: SessionService,
-          useValue: {
-            sessions: signal(sessions),
-            loading: signal(false),
-            error: signal(null),
-            refresh,
-          },
+          useValue: { sessions: signal(sessions), loading: signal(false), error: signal(null), refresh },
         },
       ],
     });
-    return TestBed.createComponent(SessionList);
+    const fixture = TestBed.createComponent(SessionList);
+    fixture.detectChanges();
+    return fixture;
   }
 
-  /** The virtual scroller measures and renders rows after the first change detection, so let it settle. */
-  async function settle(fixture: ComponentFixture<SessionList>): Promise<void> {
-    fixture.detectChanges();
-    await new Promise((resolve) => setTimeout(resolve, 50));
+  async function update(fixture: ComponentFixture<SessionList>): Promise<void> {
     await fixture.whenStable();
     fixture.detectChanges();
   }
 
-  const rows = (fixture: ComponentFixture<SessionList>): HTMLElement[] => [
-    ...(fixture.nativeElement as HTMLElement).querySelectorAll<HTMLElement>('[data-testid=session]'),
-  ];
+  const element = (fixture: ComponentFixture<SessionList>) => fixture.nativeElement as HTMLElement;
+  const rows = (fixture: ComponentFixture<SessionList>) =>
+    [...element(fixture).querySelectorAll<HTMLElement>('[data-testid=session]')];
+  const filterButtons = (fixture: ComponentFixture<SessionList>) =>
+    [...element(fixture).querySelectorAll<HTMLButtonElement>('[role=group] button')];
+  const viewMoreButton = (fixture: ComponentFixture<SessionList>) =>
+    [...element(fixture).querySelectorAll<HTMLButtonElement>('footer button')].find(
+      (b) => b.textContent?.trim() === 'View more',
+    );
+  const manySessions = (count: number) =>
+    Array.from({ length: count }, (_, i) => session(i % 2 === 0 ? 'claude' : 'codex', `session ${i}`));
 
-  const filterButtons = (fixture: ComponentFixture<SessionList>): HTMLButtonElement[] => [
-    ...(fixture.nativeElement as HTMLElement).querySelectorAll<HTMLButtonElement>('[role=group] button'),
-  ];
+  beforeEach(() => {
+    refresh.calls.reset();
+    localStorage.removeItem('agenteye.settings');
+  });
 
-  beforeEach(() => refresh.calls.reset());
+  afterEach(() => localStorage.removeItem('agenteye.settings'));
 
-  it('loads sessions on init and lists them', async () => {
+  it('loads sessions on init and lists them without a View more button when they all fit', () => {
     const fixture = render([session('claude', 'fix build'), session('codex', 'add flag')]);
-    await settle(fixture);
 
     expect(refresh).toHaveBeenCalledTimes(1);
     expect(rows(fixture).length).toBe(2);
+    expect(element(fixture).textContent).toContain('Showing 2 of 2');
+    expect(viewMoreButton(fixture)).toBeUndefined();
   });
 
   it('filters by agent and exposes the selected filter to assistive technology', async () => {
     const fixture = render([session('claude', 'fix build'), session('codex', 'add flag')]);
-    await settle(fixture);
     expect(filterButtons(fixture).map((b) => b.getAttribute('aria-pressed'))).toEqual([
       'true',
       'false',
@@ -78,7 +82,7 @@ describe('SessionList', () => {
     filterButtons(fixture)
       .find((b) => b.textContent?.trim() === 'codex')
       ?.click();
-    await settle(fixture);
+    await update(fixture);
 
     expect(rows(fixture).length).toBe(1);
     expect(rows(fixture)[0].textContent).toContain('add flag');
@@ -89,38 +93,54 @@ describe('SessionList', () => {
     ]);
   });
 
-  it('renders only the rows near the window however many sessions there are', async () => {
-    const many = Array.from({ length: 5000 }, (_, i) => session('claude', `session ${i}`));
-    const fixture = render(many);
-    await settle(fixture);
+  it('shows only one page of a long list and reports how many exist', () => {
+    const fixture = render(manySessions(5000));
 
-    const rendered = rows(fixture).length;
-    expect(rendered).toBeGreaterThan(0);
-    expect(rendered).toBeLessThan(150);
+    expect(rows(fixture).length).toBe(100);
     expect(rows(fixture)[0].textContent).toContain('session 0');
+    expect(element(fixture).textContent).toContain('Showing 100 of 5000');
+    expect(viewMoreButton(fixture)).toBeDefined();
   });
 
-  it('renders the rows at the new position after the window is scrolled', async () => {
-    const many = Array.from({ length: 5000 }, (_, i) => session('claude', `session ${i}`));
-    const fixture = render(many);
-    document.body.appendChild(fixture.nativeElement);
-    await settle(fixture);
+  it('adds another page each time View more is pressed, until everything is showing', async () => {
+    const fixture = render(manySessions(250));
 
-    const targetRow = 2000;
-    window.scrollTo(0, targetRow * 56 + (fixture.nativeElement as HTMLElement).offsetTop);
+    viewMoreButton(fixture)?.click();
+    await update(fixture);
+    expect(rows(fixture).length).toBe(200);
 
-    // The scroller reacts to real scroll events on animation frames, so poll until it catches up.
-    let firstRow = -1;
-    for (let attempt = 0; attempt < 40 && firstRow < targetRow - 30; attempt++) {
-      await new Promise((resolve) => setTimeout(resolve, 50));
-      fixture.detectChanges();
-      const match = /session (\d+)/.exec(rows(fixture)[0]?.textContent ?? '');
-      firstRow = match ? Number(match[1]) : -1;
-    }
+    viewMoreButton(fixture)?.click();
+    await update(fixture);
+    expect(rows(fixture).length).toBe(250);
+    expect(element(fixture).textContent).toContain('Showing 250 of 250');
+    expect(viewMoreButton(fixture)).toBeUndefined();
+  });
 
-    window.scrollTo(0, 0);
-    expect(firstRow).toBeGreaterThanOrEqual(targetRow - 30);
-    expect(firstRow).toBeLessThanOrEqual(targetRow);
-    expect(rows(fixture).length).toBeLessThan(150);
+  it('starts over at one page when the filter changes', async () => {
+    const fixture = render(manySessions(1000));
+    viewMoreButton(fixture)?.click();
+    await update(fixture);
+    expect(rows(fixture).length).toBe(200);
+
+    filterButtons(fixture)
+      .find((b) => b.textContent?.trim() === 'codex')
+      ?.click();
+    await update(fixture);
+
+    expect(rows(fixture).length).toBe(100);
+    expect(element(fixture).textContent).toContain('Showing 100 of 500');
+  });
+
+  it('uses the page size from settings, including when it changes', async () => {
+    const fixture = render(manySessions(1000));
+    expect(rows(fixture).length).toBe(100);
+
+    TestBed.inject(SettingsService).setSessionPageSize(250);
+    await update(fixture);
+
+    expect(rows(fixture).length).toBe(250);
+    viewMoreButton(fixture)?.click();
+    await update(fixture);
+    expect(rows(fixture).length).toBe(500);
   });
 });

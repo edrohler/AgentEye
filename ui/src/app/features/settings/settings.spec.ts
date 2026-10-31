@@ -31,6 +31,21 @@ describe('Settings', () => {
     expect(options.map((o) => o.checked)).toEqual([true, false, false]);
   });
 
+  it('offers the session page sizes with the current one selected, and changes it', async () => {
+    const fixture = TestBed.createComponent(Settings);
+    fixture.detectChanges();
+    const select = (fixture.nativeElement as HTMLElement).querySelector('select') as HTMLSelectElement;
+
+    expect([...select.options].map((o) => o.value)).toEqual(['50', '100', '250', '500']);
+    expect(select.value).toBe('100');
+
+    select.value = '250';
+    select.dispatchEvent(new Event('change'));
+    await fixture.whenStable();
+
+    expect(TestBed.inject(SettingsService).sessionPageSize()).toBe(250);
+  });
+
   it('changes the theme when an option is chosen', async () => {
     const fixture = TestBed.createComponent(Settings);
     fixture.detectChanges();

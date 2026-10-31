@@ -1,46 +1,46 @@
-import {
-  CdkFixedSizeVirtualScroll,
-  CdkVirtualForOf,
-  CdkVirtualScrollViewport,
-  CdkVirtualScrollableWindow,
-} from '@angular/cdk/scrolling';
 import { DatePipe } from '@angular/common';
 import { ChangeDetectionStrategy, Component, OnInit, computed, inject, signal } from '@angular/core';
 
-import { AgentKind, SessionSummary } from '../../core/models';
+import { AgentKind } from '../../core/models';
 import { SessionService } from '../../core/session.service';
+import { SettingsService } from '../../core/settings.service';
 
 type AgentFilter = AgentKind | 'all';
 
 @Component({
   selector: 'app-session-list',
-  imports: [
-    CdkFixedSizeVirtualScroll,
-    CdkVirtualForOf,
-    CdkVirtualScrollViewport,
-    CdkVirtualScrollableWindow,
-    DatePipe,
-  ],
+  imports: [DatePipe],
   templateUrl: './session-list.html',
   host: { class: 'block px-6 py-4' },
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class SessionList implements OnInit {
   private readonly service = inject(SessionService);
+  private readonly pageSize = inject(SettingsService).sessionPageSize;
 
   protected readonly filters: readonly AgentFilter[] = ['all', 'claude', 'codex'];
   protected readonly filter = signal<AgentFilter>('all');
 
-  /** Height of one row in pixels. Virtual scrolling needs it fixed; the template sets each row to exactly this. */
-  protected readonly rowHeight = 56;
+  /** How many pages of sessions are showing. Kept as a count so changing the page size setting resizes the list. */
+  private readonly pagesShown = signal(1);
 
   protected readonly loading = this.service.loading;
   protected readonly error = this.service.error;
-  protected readonly visibleSessions = computed(() => {
+
+  private readonly matchingSessions = computed(() => {
     const filter = this.filter();
     const sessions = this.service.sessions();
     return filter === 'all' ? sessions : sessions.filter((s) => s.agent === filter);
   });
+
+  protected readonly totalCount = computed(() => this.matchingSessions().length);
+
+  /** Only this slice is rendered, so the page stays fast however many sessions exist. */
+  protected readonly visibleSessions = computed(() =>
+    this.matchingSessions().slice(0, this.pageSize() * this.pagesShown()),
+  );
+
+  protected readonly remainingCount = computed(() => this.totalCount() - this.visibleSessions().length);
 
   ngOnInit(): void {
     void this.service.refresh();
@@ -52,10 +52,11 @@ export class SessionList implements OnInit {
 
   protected setFilter(filter: AgentFilter): void {
     this.filter.set(filter);
+    this.pagesShown.set(1);
   }
 
-  protected trackByPath(_index: number, session: SessionSummary): string {
-    return session.path;
+  protected viewMore(): void {
+    this.pagesShown.update((pages) => pages + 1);
   }
 
   protected formatSize(bytes: number): string {

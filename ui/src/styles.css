@@ -48,6 +48,12 @@
     @apply disabled:cursor-default disabled:opacity-50;
   }
 
+  /* Text inputs and selects. */
+  .field {
+    @apply rounded-md border border-line bg-surface px-3 py-1.5 text-fg;
+    @apply focus-visible:outline-2 focus-visible:outline-accent;
+  }
+
   /* A button that holds only an icon (use with `btn`). */
   .btn-icon {
     @apply px-2;

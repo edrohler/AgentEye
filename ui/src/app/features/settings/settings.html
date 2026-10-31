@@ -19,3 +19,18 @@
     }
   </fieldset>
 </section>
+
+<section aria-labelledby="sessions-heading" class="mt-6">
+  <h3 id="sessions-heading" class="mb-2 font-semibold">Sessions</h3>
+  <label class="flex items-center gap-3">
+    Sessions shown at a time
+    <select class="field" (change)="selectPageSize($event)">
+      @for (size of pageSizes; track size) {
+        <option [value]="size" [selected]="size === sessionPageSize()">{{ size }}</option>
+      }
+    </select>
+  </label>
+  <p class="mt-1 text-xs text-muted">
+    The list shows this many sessions first. "View more" adds the same number again.
+  </p>
+</section>

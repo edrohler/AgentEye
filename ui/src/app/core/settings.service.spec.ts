@@ -79,3 +79,52 @@ describe('SettingsService', () => {
     });
   });
 });
+
+describe('SettingsService session page size', () => {
+  beforeEach(() => localStorage.removeItem(STORAGE_KEY));
+  afterEach(() => localStorage.removeItem(STORAGE_KEY));
+
+  it('defaults to 100', () => {
+    expect(createService().sessionPageSize()).toBe(100);
+  });
+
+  it('applies and remembers an allowed size', () => {
+    const service = createService();
+
+    service.setSessionPageSize(250);
+
+    expect(service.sessionPageSize()).toBe(250);
+    expect(JSON.parse(localStorage.getItem(STORAGE_KEY) ?? '{}')).toEqual({ sessionPageSize: 250 });
+  });
+
+  it('ignores a size that is not offered', () => {
+    const service = createService();
+
+    service.setSessionPageSize(7);
+
+    expect(service.sessionPageSize()).toBe(100);
+    expect(localStorage.getItem(STORAGE_KEY)).toContain('100');
+  });
+
+  it('restores the saved size, and ignores an invalid stored one', () => {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify({ sessionPageSize: 500 }));
+    expect(createService().sessionPageSize()).toBe(500);
+
+    TestBed.resetTestingModule();
+    localStorage.setItem(STORAGE_KEY, JSON.stringify({ sessionPageSize: 'lots' }));
+    expect(createService().sessionPageSize()).toBe(100);
+  });
+
+  it('keeps the theme when saving the page size', () => {
+    const service = createService();
+    service.setTheme('dark');
+
+    service.setSessionPageSize(50);
+
+    expect(JSON.parse(localStorage.getItem(STORAGE_KEY) ?? '{}')).toEqual({
+      theme: 'dark',
+      sessionPageSize: 50,
+    });
+    document.documentElement.removeAttribute('data-theme');
+  });
+});
