@@ -1,0 +1,9 @@
+<input
+  type="search"
+  class="field w-full"
+  placeholder="Search all sessions…"
+  aria-label="Search all sessions"
+  [value]="query()"
+  (input)="onInput($event)"
+  (keydown.escape)="clear()"
+/>

@@ -143,7 +143,7 @@ Key properties that drive the design:
 
 ## 9. Still open
 
-- Rust ingest throughput spike (the Python scan below is only a baseline).
+- Indexing throughput (73 MB/s) is below the 100 MB/s target; see section 11 for where to look.
 
 ## 10. Data scale spike (this machine, 2026-10-31)
 
@@ -157,4 +157,19 @@ Key properties that drive the design:
 - Plain Python `json` parsed at about 105-117 MB/s, so a full cold index here takes a few seconds even before Rust. Rust with `serde_json` should be several times faster.
 - Design the app for 10-100x this (heavy users reach tens of GB). Incremental offset-based tailing matters more than raw parse speed.
 - Claude record types seen: assistant, user, attachment, last-prompt, ai-title, api-request(-blob), plus others. Codex: response_item, event_msg, token_usage_record, turn_context, compacted, session_meta.
-- Search implication: the text is about 430 MB, so an FTS5 index is likely 100-300 MB, a fraction of the source. Fine to keep as a rebuildable cache. Index message text only, and skip the large tool results and blobs.
+- Search implication: index message text only, and skip the large tool results and blobs. (The estimate of 100-300 MB for the index was far too high; see section 11 for the measured size.)
+
+## 11. Rust spike results (release build, same machine, 2026-10-31)
+
+| Tier | Result |
+|---|---|
+| 1. Discovery (metadata only) | 235 files, 430.3 MB, **9.5 ms** |
+| 1. Discovery + summaries (head and tail reads, parallel) | **423 ms** for all 235 sessions |
+| 3. Full index build (cold) | 9,508 messages from 235 files, 430.3 MB scanned in **5.9 s (73 MB/s)** |
+| Index size | **16.7 MB** for 430 MB of sessions (about 4%) |
+| Warm search (`devindext`, limit 20) | **20 hits in 3.5 ms**, across Claude and Codex sessions (target was under 50 ms) |
+
+- Search is well under the 50 ms target. Two things to handle when the UI shows results: (1) snippet highlights use `[` `]`, which collide with literal brackets in the text (Markdown links, `[DevIndext]`), so switch to markers that cannot occur in text; (2) one session can return many hits, so group results by session.
+- Tier 1 is comfortably fast: a complete, titled session list appears in under half a second with no index at all.
+- Only 9.5k messages came out of 430 MB. Most bytes are tool results, attachments and request blobs that we deliberately skip, so the index is tiny. Searching a warm index should be near-instant (not yet measured on a populated database).
+- Cold indexing at 73 MB/s is slower than the 100 MB/s target and slower than the Python baseline, because it deserializes every line fully (including large lines we discard) and inserts into SQLite. Candidates, in order: skip lines by a cheap byte-prefix check on `"type"` before deserializing, avoid the untagged `Content` enum for lines we will drop, and measure insert cost separately. Profile before changing anything. A one-time cold build of a few seconds is acceptable for v1; incremental sync after that only reads appended bytes.

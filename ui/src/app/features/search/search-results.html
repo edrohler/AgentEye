@@ -1,0 +1,35 @@
+@if (error(); as message) {
+  <p class="text-danger" role="alert">{{ message }}</p>
+}
+
+@if (hitCount() === 0 && !loading()) {
+  <p class="text-muted">No matches.</p>
+} @else {
+  <p class="mb-4 text-muted">{{ hitCount() }} matches in {{ groups().length }} sessions</p>
+  <ul>
+    @for (group of groups(); track group.path) {
+      <li class="mb-5" data-testid="group">
+        <h2 class="mb-1 flex items-baseline gap-3 text-[15px] font-semibold">
+          <span class="agent-label">{{ group.agent }}</span>
+          <span class="truncate" [title]="group.path" data-testid="file">{{ basename(group.path) }}</span>
+        </h2>
+        <ul>
+          @for (hit of group.hits; track hit.byteOffset) {
+            <li class="grid grid-cols-[5rem_minmax(0,1fr)] gap-3 border-b border-line py-1" data-testid="hit">
+              <span class="text-xs text-muted">{{ hit.role }}</span>
+              <span class="[overflow-wrap:anywhere]" data-testid="snippet">
+                @for (part of splitSnippet(hit.snippet); track $index) {
+                  @if (part.highlighted) {
+                    <mark class="bg-accent/30 text-inherit">{{ part.text }}</mark>
+                  } @else {
+                    {{ part.text }}
+                  }
+                }
+              </span>
+            </li>
+          }
+        </ul>
+      </li>
+    }
+  </ul>
+}

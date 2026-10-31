@@ -1,0 +1,74 @@
+@import 'tailwindcss';
+
+/*
+ * Design tokens. `@theme` turns each --color-* variable into utilities (bg-surface, text-muted,
+ * border-line, text-accent, text-danger, ...), so templates never repeat raw colors and never
+ * need `dark:` variants.
+ *
+ * Each token is `light-dark(<light>, <dark>)`: the browser picks a side from the element's
+ * `color-scheme`. That scheme follows the OS by default and is forced by the `data-theme`
+ * attribute the settings service puts on <html> ("light" or "dark"; absent means "system").
+ */
+@theme {
+  --color-surface: light-dark(#ffffff, #18181b);
+  --color-fg: light-dark(#1c1c1e, #f4f4f5);
+  --color-muted: light-dark(#6b7280, #a1a1aa);
+  --color-line: light-dark(#d4d4d8, #3f3f46);
+  --color-accent: light-dark(#2563eb, #3b82f6);
+  /* Text on an accent background. White fails 4.5:1 on the lighter dark-mode accent, so dark mode uses the surface color. */
+  --color-on-accent: light-dark(#ffffff, #18181b);
+  --color-danger: light-dark(#b91c1c, #f87171);
+}
+
+@layer base {
+  :root {
+    color-scheme: light dark;
+  }
+
+  :root[data-theme='light'] {
+    color-scheme: light;
+  }
+
+  :root[data-theme='dark'] {
+    color-scheme: dark;
+  }
+
+  body {
+    @apply bg-surface text-fg text-sm;
+    font-family: system-ui, sans-serif;
+  }
+}
+
+/* The one shared look for buttons; `btn-active` marks a selected toggle (for example a filter). */
+@layer components {
+  .btn {
+    @apply inline-flex items-center justify-center gap-2;
+    @apply cursor-pointer rounded-md border border-line bg-transparent px-3 py-1 text-inherit;
+    @apply focus-visible:outline-2 focus-visible:outline-accent;
+    @apply disabled:cursor-default disabled:opacity-50;
+  }
+
+  /* Text inputs and selects. */
+  .field {
+    @apply rounded-md border border-line bg-surface px-3 py-1.5 text-fg;
+    @apply focus-visible:outline-2 focus-visible:outline-accent;
+  }
+
+  /* A button that holds only an icon (use with `btn`). */
+  .btn-icon {
+    @apply px-2;
+
+    & > svg {
+      @apply size-5;
+    }
+  }
+
+  .btn-active {
+    @apply border-accent bg-accent text-on-accent;
+  }
+
+  /* Small uppercase tag naming which agent a session or hit came from. */
+  .agent-label {
+    @apply text-xs uppercase tracking-wider text-accent;
+  }
+}

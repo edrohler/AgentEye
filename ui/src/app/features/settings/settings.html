@@ -1,0 +1,36 @@
+<h2 class="mb-4 text-base font-semibold">Settings</h2>
+
+<section aria-labelledby="appearance-heading">
+  <h3 id="appearance-heading" class="mb-2 font-semibold">Appearance</h3>
+  <fieldset class="flex flex-col gap-2">
+    <legend class="mb-1 text-muted">Theme</legend>
+    @for (option of themes; track option) {
+      <label class="flex cursor-pointer items-center gap-2">
+        <input
+          type="radio"
+          class="accent-accent"
+          name="theme"
+          [value]="option"
+          [checked]="theme() === option"
+          (change)="selectTheme(option)"
+        />
+        {{ label(option) }}
+      </label>
+    }
+  </fieldset>
+</section>
+
+<section aria-labelledby="sessions-heading" class="mt-6">
+  <h3 id="sessions-heading" class="mb-2 font-semibold">Sessions</h3>
+  <label class="flex items-center gap-3">
+    Sessions shown at a time
+    <select class="field" (change)="selectPageSize($event)">
+      @for (size of pageSizes; track size) {
+        <option [value]="size" [selected]="size === sessionPageSize()">{{ size }}</option>
+      }
+    </select>
+  </label>
+  <p class="mt-1 text-xs text-muted">
+    The list shows this many sessions first. "View more" adds the same number again.
+  </p>
+</section>

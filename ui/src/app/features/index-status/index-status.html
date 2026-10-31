@@ -1,0 +1,14 @@
+<span role="status">
+  @switch (status().state) {
+    @case ('running') {
+      Indexing{{ percent() === null ? '' : ' ' + percent() + '%' }}…
+    }
+    @case ('failed') {
+      <span class="text-danger">Indexing failed: {{ failureMessage() }}</span>
+    }
+    @default {
+      Search index ready
+    }
+  }
+</span>
+<button type="button" class="btn" (click)="reindex()" [disabled]="isRunning()">Reindex</button>
