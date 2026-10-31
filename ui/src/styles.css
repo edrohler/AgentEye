@@ -2,32 +2,33 @@
 
 /*
  * Design tokens. `@theme` turns each --color-* variable into utilities (bg-surface, text-muted,
- * border-line, text-accent, text-danger, ...), so templates never repeat raw colors and dark
- * mode is one override block instead of `dark:` variants on every element.
+ * border-line, text-accent, text-danger, ...), so templates never repeat raw colors and never
+ * need `dark:` variants.
+ *
+ * Each token is `light-dark(<light>, <dark>)`: the browser picks a side from the element's
+ * `color-scheme`. That scheme follows the OS by default and is forced by the `data-theme`
+ * attribute the settings service puts on <html> ("light" or "dark"; absent means "system").
  */
 @theme {
-  --color-surface: #ffffff;
-  --color-fg: #1c1c1e;
-  --color-muted: #6b7280;
-  --color-line: #d4d4d8;
-  --color-accent: #2563eb;
-  --color-danger: #b91c1c;
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --color-surface: #18181b;
-    --color-fg: #f4f4f5;
-    --color-muted: #a1a1aa;
-    --color-line: #3f3f46;
-    --color-accent: #3b82f6;
-    --color-danger: #f87171;
-  }
+  --color-surface: light-dark(#ffffff, #18181b);
+  --color-fg: light-dark(#1c1c1e, #f4f4f5);
+  --color-muted: light-dark(#6b7280, #a1a1aa);
+  --color-line: light-dark(#d4d4d8, #3f3f46);
+  --color-accent: light-dark(#2563eb, #3b82f6);
+  --color-danger: light-dark(#b91c1c, #f87171);
 }
 
 @layer base {
   :root {
     color-scheme: light dark;
+  }
+
+  :root[data-theme='light'] {
+    color-scheme: light;
+  }
+
+  :root[data-theme='dark'] {
+    color-scheme: dark;
   }
 
   body {
@@ -39,9 +40,19 @@
 /* The one shared look for buttons; `btn-active` marks a selected toggle (for example a filter). */
 @layer components {
   .btn {
+    @apply inline-flex items-center justify-center gap-2;
     @apply cursor-pointer rounded-md border border-line bg-transparent px-3 py-1 text-inherit;
     @apply focus-visible:outline-2 focus-visible:outline-accent;
     @apply disabled:cursor-default disabled:opacity-50;
+  }
+
+  /* A button that holds only an icon (use with `btn`). */
+  .btn-icon {
+    @apply px-2;
+
+    & > svg {
+      @apply size-5;
+    }
   }
 
   .btn-active {

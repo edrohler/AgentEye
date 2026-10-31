@@ -1,0 +1,21 @@
+<h2 class="mb-4 text-base font-semibold">Settings</h2>
+
+<section aria-labelledby="appearance-heading">
+  <h3 id="appearance-heading" class="mb-2 font-semibold">Appearance</h3>
+  <fieldset class="flex flex-col gap-2">
+    <legend class="mb-1 text-muted">Theme</legend>
+    @for (option of themes; track option) {
+      <label class="flex cursor-pointer items-center gap-2">
+        <input
+          type="radio"
+          class="accent-accent"
+          name="theme"
+          [value]="option"
+          [checked]="theme() === option"
+          (change)="selectTheme(option)"
+        />
+        {{ label(option) }}
+      </label>
+    }
+  </fieldset>
+</section>

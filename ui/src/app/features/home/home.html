@@ -1,0 +1,9 @@
+<div class="border-b border-line px-6 py-3">
+  <app-search-box class="block max-w-2xl" />
+</div>
+
+@if (hasQuery()) {
+  <app-search-results />
+} @else {
+  <app-session-list />
+}
