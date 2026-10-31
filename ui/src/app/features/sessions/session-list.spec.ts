@@ -45,20 +45,20 @@ describe('SessionList', () => {
     fixture.detectChanges();
 
     expect(refresh).toHaveBeenCalledTimes(1);
-    expect(fixture.nativeElement.querySelectorAll('.sessions li').length).toBe(2);
+    expect(fixture.nativeElement.querySelectorAll('[data-testid=session]').length).toBe(2);
   });
 
   it('filters by agent', async () => {
     const fixture = TestBed.createComponent(SessionList);
     fixture.detectChanges();
 
-    const codexButton = [...fixture.nativeElement.querySelectorAll('.filters button')].find(
+    const codexButton = [...fixture.nativeElement.querySelectorAll('[role=group] button')].find(
       (b) => (b as HTMLElement).textContent?.trim() === 'codex',
     ) as HTMLButtonElement;
     codexButton.click();
     await fixture.whenStable();
 
-    const rows = fixture.nativeElement.querySelectorAll('.sessions li');
+    const rows = fixture.nativeElement.querySelectorAll('[data-testid=session]');
     expect(rows.length).toBe(1);
     expect(rows[0].textContent).toContain('add flag');
   });

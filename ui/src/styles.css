@@ -1,0 +1,55 @@
+@import 'tailwindcss';
+
+/*
+ * Design tokens. `@theme` turns each --color-* variable into utilities (bg-surface, text-muted,
+ * border-line, text-accent, text-danger, ...), so templates never repeat raw colors and dark
+ * mode is one override block instead of `dark:` variants on every element.
+ */
+@theme {
+  --color-surface: #ffffff;
+  --color-fg: #1c1c1e;
+  --color-muted: #6b7280;
+  --color-line: #d4d4d8;
+  --color-accent: #2563eb;
+  --color-danger: #b91c1c;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --color-surface: #18181b;
+    --color-fg: #f4f4f5;
+    --color-muted: #a1a1aa;
+    --color-line: #3f3f46;
+    --color-accent: #3b82f6;
+    --color-danger: #f87171;
+  }
+}
+
+@layer base {
+  :root {
+    color-scheme: light dark;
+  }
+
+  body {
+    @apply bg-surface text-fg text-sm;
+    font-family: system-ui, sans-serif;
+  }
+}
+
+/* The one shared look for buttons; `btn-active` marks a selected toggle (for example a filter). */
+@layer components {
+  .btn {
+    @apply cursor-pointer rounded-md border border-line bg-transparent px-3 py-1 text-inherit;
+    @apply focus-visible:outline-2 focus-visible:outline-accent;
+    @apply disabled:cursor-default disabled:opacity-50;
+  }
+
+  .btn-active {
+    @apply border-accent bg-accent text-white;
+  }
+
+  /* Small uppercase tag naming which agent a session or hit came from. */
+  .agent-label {
+    @apply text-xs uppercase tracking-wider text-accent;
+  }
+}

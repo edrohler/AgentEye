@@ -9,4 +9,4 @@ mod query;
 mod schema;
 
 pub use error::{IndexError, Result};
-pub use index::{Index, SearchHit, SyncOutcome};
+pub use index::{Index, SearchHit, SyncOutcome, HIGHLIGHT_END, HIGHLIGHT_START};

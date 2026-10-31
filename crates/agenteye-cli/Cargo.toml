@@ -13,6 +13,7 @@ path = "src/main.rs"
 
 [dependencies]
 agenteye-core.workspace = true
+agenteye-engine.workspace = true
 agenteye-index.workspace = true
 agenteye-sources.workspace = true
 anyhow.workspace = true

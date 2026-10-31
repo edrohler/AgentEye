@@ -16,5 +16,6 @@ tauri-build = { version = "2", features = [] }
 
 [dependencies]
 agenteye-core.workspace = true
+agenteye-engine.workspace = true
 agenteye-sources.workspace = true
 tauri = { version = "2", features = [] }

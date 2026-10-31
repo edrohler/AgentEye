@@ -167,7 +167,7 @@ mod tests {
     #[test]
     fn missing_root_is_empty() {
         let source = ClaudeSource::new("does/not/exist");
-        assert!(source.discover().unwrap().is_empty());
+        assert_eq!(source.discover().unwrap(), Vec::new());
     }
 
     #[test]

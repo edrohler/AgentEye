@@ -3,7 +3,7 @@ use std::io::Write;
 use std::path::Path;
 
 use agenteye_core::{SessionFile, SessionSource};
-use agenteye_index::Index;
+use agenteye_index::{Index, HIGHLIGHT_END, HIGHLIGHT_START};
 use agenteye_sources::ClaudeSource;
 
 fn user_line(text: &str) -> String {
@@ -46,11 +46,11 @@ fn indexes_incrementally_and_finds_text() {
 
     let hits = index.search("staging", 10).unwrap();
     assert_eq!(hits.len(), 1);
-    assert!(hits[0].snippet.contains("[staging]"));
+    assert!(hits[0].snippet.contains(&format!("{HIGHLIGHT_START}staging{HIGHLIGHT_END}")));
     assert!(hits[0].byte_offset > 0);
 
     assert_eq!(index.search("rotate keys", 10).unwrap().len(), 1);
-    assert!(index.search("nonexistent", 10).unwrap().is_empty());
+    assert_eq!(index.search("nonexistent", 10).unwrap(), Vec::new());
 }
 
 #[test]
@@ -69,6 +69,28 @@ fn rebuilds_when_the_file_shrinks() {
     fs::write(&session, user_line("beta")).unwrap();
     let outcome = index.sync_file(&source, &current(&source)).unwrap();
     assert!(outcome.rebuilt);
-    assert!(index.search("alpha", 10).unwrap().is_empty());
+    assert_eq!(index.search("alpha", 10).unwrap(), Vec::new());
     assert_eq!(index.search("beta", 10).unwrap().len(), 1);
+}
+
+#[test]
+fn read_only_connection_searches_a_database_a_writer_has_open() {
+    let dir = tempfile::tempdir().unwrap();
+    let project = dir.path().join("proj");
+    fs::create_dir_all(&project).unwrap();
+    fs::write(project.join("s1.jsonl"), user_line("needle in a haystack")).unwrap();
+
+    let source = ClaudeSource::new(dir.path());
+    let db_path = dir.path().join("index.db");
+    let mut writer = Index::open(&db_path).unwrap();
+    writer.sync_file(&source, &current(&source)).unwrap();
+
+    let reader = Index::open_read_only(&db_path).unwrap();
+    assert_eq!(reader.search("needle", 10).unwrap().len(), 1);
+}
+
+#[test]
+fn read_only_open_fails_for_a_missing_database() {
+    let dir = tempfile::tempdir().unwrap();
+    assert!(Index::open_read_only(dir.path().join("typo.db")).is_err());
 }

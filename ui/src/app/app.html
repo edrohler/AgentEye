@@ -1,1 +1,13 @@
-<app-session-list />
+<header class="flex items-center gap-4 border-b border-line px-6 py-3">
+  <h1 class="text-xl font-semibold">AgentEye</h1>
+  <app-search-box class="max-w-2xl flex-1" />
+  <app-index-status />
+</header>
+
+<main>
+  @if (hasQuery()) {
+    <app-search-results />
+  } @else {
+    <app-session-list />
+  }
+</main>

@@ -1,35 +1,38 @@
-<header class="toolbar">
-  <h1>AgentEye</h1>
-  <div class="filters" role="group" aria-label="Filter by agent">
+<header class="mb-4 flex items-center gap-4">
+  <h2 class="mr-auto text-base font-semibold">Sessions</h2>
+  <div class="flex gap-1" role="group" aria-label="Filter by agent">
     @for (option of filters; track option) {
-      <button type="button" [class.active]="filter() === option" (click)="setFilter(option)">
+      <button type="button" class="btn" [class.btn-active]="filter() === option" (click)="setFilter(option)">
         {{ option }}
       </button>
     }
   </div>
-  <button type="button" (click)="refresh()" [disabled]="loading()">Refresh</button>
+  <button type="button" class="btn" (click)="refresh()" [disabled]="loading()">Refresh</button>
 </header>
 
 @if (error(); as message) {
-  <p class="error" role="alert">{{ message }}</p>
+  <p class="text-danger" role="alert">{{ message }}</p>
 }
 
 @if (loading() && visibleSessions().length === 0) {
-  <p class="status">Loading sessions…</p>
+  <p class="text-muted">Loading sessions…</p>
 } @else if (visibleSessions().length === 0) {
-  <p class="status">No sessions found.</p>
+  <p class="text-muted">No sessions found.</p>
 } @else {
-  <ul class="sessions">
+  <ul>
     @for (session of visibleSessions(); track session.path) {
-      <li>
-        <span class="agent" [attr.data-agent]="session.agent">{{ session.agent }}</span>
-        <div class="details">
-          <span class="title">{{ session.title ?? '(untitled)' }}</span>
-          <span class="meta">{{ session.cwd ?? session.path }}</span>
+      <li
+        class="grid grid-cols-[5rem_minmax(0,1fr)_12rem_5rem_10rem] items-center gap-4 border-b border-line py-2"
+        data-testid="session"
+      >
+        <span class="agent-label">{{ session.agent }}</span>
+        <div class="flex min-w-0 flex-col">
+          <span class="truncate">{{ session.title ?? '(untitled)' }}</span>
+          <span class="truncate text-xs text-muted">{{ session.cwd ?? session.path }}</span>
         </div>
-        <span class="meta">{{ session.model ?? '' }}</span>
-        <span class="meta">{{ formatSize(session.sizeBytes) }}</span>
-        <span class="meta">{{ session.lastActivityMs | date: 'short' }}</span>
+        <span class="truncate text-xs text-muted">{{ session.model ?? '' }}</span>
+        <span class="truncate text-xs text-muted">{{ formatSize(session.sizeBytes) }}</span>
+        <span class="truncate text-xs text-muted">{{ session.lastActivityMs | date: 'short' }}</span>
       </li>
     }
   </ul>

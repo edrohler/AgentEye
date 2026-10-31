@@ -1,7 +1,9 @@
-/// Connection settings: WAL lets searches read while the single writer indexes.
+/// Connection settings: WAL lets searches read while the single writer indexes, and the busy
+/// timeout makes a connection wait briefly for a lock instead of failing at once.
 pub(crate) const PRAGMAS: &str = "
     PRAGMA journal_mode = WAL;
     PRAGMA synchronous = NORMAL;
+    PRAGMA busy_timeout = 5000;
 ";
 
 /// `files` tracks indexing progress per session file. `messages` is the FTS5 table; only `text`

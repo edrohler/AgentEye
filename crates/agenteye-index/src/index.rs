@@ -1,11 +1,21 @@
 use std::path::{Path, PathBuf};
+use std::time::Duration;
 
 use agenteye_core::{AgentKind, SessionFile, SessionSource};
-use rusqlite::{params, Connection, OptionalExtension};
+use rusqlite::{params, Connection, OpenFlags, OptionalExtension};
+use serde::Serialize;
 
 use crate::query::to_fts_query;
 use crate::schema::{PRAGMAS, SCHEMA};
 use crate::Result;
+
+/// Wraps matched words in [`SearchHit::snippet`]. Control characters are used because, unlike
+/// `[` or `*`, they cannot occur in real message text, so a UI can split on them unambiguously.
+pub const HIGHLIGHT_START: char = '\u{2}';
+pub const HIGHLIGHT_END: char = '\u{3}';
+
+/// How long a connection waits for another connection's lock before failing.
+const BUSY_TIMEOUT: Duration = Duration::from_secs(5);
 
 /// Work done by one [`Index::sync_file`] call.
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
@@ -16,7 +26,8 @@ pub struct SyncOutcome {
     pub rebuilt: bool,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "camelCase")]
 pub struct SearchHit {
     pub agent: AgentKind,
     pub path: PathBuf,
@@ -24,7 +35,7 @@ pub struct SearchHit {
     pub timestamp: Option<String>,
     /// Byte offset of the matching line in `path`.
     pub byte_offset: u64,
-    /// Match excerpt with hits wrapped in `[` `]`.
+    /// Match excerpt with each hit wrapped in [`HIGHLIGHT_START`] and [`HIGHLIGHT_END`].
     pub snippet: String,
 }
 
@@ -33,8 +44,21 @@ pub struct Index {
 }
 
 impl Index {
+    /// Opens the database for reading and writing, creating it and its schema if needed.
     pub fn open(path: impl AsRef<Path>) -> Result<Self> {
         Self::init(Connection::open(path)?)
+    }
+
+    /// Opens an existing database for searching only. Fails if it does not exist, so a mistyped
+    /// path is an error instead of a silently created empty index. Safe to use while another
+    /// connection is writing (WAL mode).
+    pub fn open_read_only(path: impl AsRef<Path>) -> Result<Self> {
+        let conn = Connection::open_with_flags(
+            path,
+            OpenFlags::SQLITE_OPEN_READ_ONLY | OpenFlags::SQLITE_OPEN_NO_MUTEX,
+        )?;
+        conn.busy_timeout(BUSY_TIMEOUT)?;
+        Ok(Self { conn })
     }
 
     pub fn open_in_memory() -> Result<Self> {
@@ -131,7 +155,7 @@ impl Index {
 
         let mut statement = self.conn.prepare_cached(
             "SELECT f.agent, f.path, messages.role, messages.timestamp, messages.byte_offset,
-                    snippet(messages, 0, '[', ']', '…', 16)
+                    snippet(messages, 0, char(2), char(3), '…', 16)
              FROM messages
              JOIN files f ON f.id = CAST(messages.file_id AS INTEGER)
              WHERE messages MATCH ?1

@@ -12,6 +12,7 @@ Desktop app for browsing, searching and monitoring AI agent sessions (Claude Cod
 | Core | Rust (stable, edition 2021) | 1.99+ (workspace minimum 1.82) |
 | Desktop shell | Tauri | 2.x |
 | Frontend | Angular (standalone, signals, zoneless) | 22.x |
+| Styling | Tailwind CSS | 4.x |
 | Language | TypeScript | 6.0 |
 | Runtime | Node.js | 24.15+ |
 | Search index | SQLite FTS5 via `rusqlite` (bundled) | |
@@ -29,6 +30,7 @@ Desktop app for browsing, searching and monitoring AI agent sessions (Claude Cod
 | `crates/agenteye-core` | Domain types and the `SessionSource` trait. No I/O. |
 | `crates/agenteye-sources` | Claude and Codex adapters, JSONL tailing, `Catalog`. |
 | `crates/agenteye-index` | SQLite FTS5 search index with incremental sync. |
+| `crates/agenteye-engine` | Application layer: discovery, search and background sync behind one `Engine`. |
 | `crates/agenteye-cli` | `agenteye` dev CLI: times each tier on your real data. |
 | `src-tauri` | Thin Tauri 2 shell; commands only translate to the crates above. |
 | `ui` | Angular frontend. |

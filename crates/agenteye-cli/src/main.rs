@@ -11,7 +11,8 @@ use std::path::{Path, PathBuf};
 use std::time::{Duration, Instant};
 
 use agenteye_core::AgentKind;
-use agenteye_index::Index;
+use agenteye_engine::Engine;
+use agenteye_index::{Index, HIGHLIGHT_END, HIGHLIGHT_START};
 use agenteye_sources::Catalog;
 use anyhow::{bail, Context, Result};
 use clap::{Parser, Subcommand};
@@ -112,47 +113,37 @@ fn open(agent: AgentKind, path: &Path) -> Result<()> {
 }
 
 fn index(db: &Path) -> Result<()> {
-    let catalog = Catalog::from_env();
-    let mut index = Index::open(db).with_context(|| format!("opening {}", db.display()))?;
+    let engine = Engine::new(Catalog::from_env(), db)
+        .with_context(|| format!("opening {}", db.display()))?;
 
-    let files = catalog.discover();
     let started = Instant::now();
-    let (mut messages, mut bytes) = (0_usize, 0_u64);
-    for file in &files {
-        let Some(source) = catalog.source(file.agent) else { continue };
-        let outcome = index
-            .sync_file(source, file)
-            .with_context(|| format!("indexing {}", file.path.display()))?;
-        messages += outcome.messages_added;
-        bytes += outcome.bytes_scanned;
-    }
+    let summary = engine.sync(|_| {})?;
     let elapsed = started.elapsed();
 
     println!(
-        "indexed {messages} messages from {} files, {} scanned in {} ({})",
-        files.len(),
-        megabytes(bytes),
+        "indexed {} messages from {} files ({} failed), {} scanned in {} ({})",
+        summary.messages_added,
+        summary.files_total,
+        summary.files_failed,
+        megabytes(summary.bytes_scanned),
         millis(elapsed),
-        throughput(bytes, elapsed),
+        throughput(summary.bytes_scanned, elapsed),
     );
     Ok(())
 }
 
 fn search(db: &Path, limit: usize, query: &str) -> Result<()> {
-    let index = Index::open(db).with_context(|| format!("opening {}", db.display()))?;
+    // Read-only, so a mistyped --db path is an error instead of creating an empty database.
+    let index = Index::open_read_only(db).with_context(|| format!("opening {}", db.display()))?;
     let started = Instant::now();
     let hits = index.search(query, limit)?;
     let elapsed = started.elapsed();
 
     println!("{} hits in {}", hits.len(), millis(elapsed));
     for hit in &hits {
-        println!(
-            "  [{}] {}  @{}\n      {}",
-            hit.agent,
-            hit.path.display(),
-            hit.byte_offset,
-            hit.snippet
-        );
+        // Show hits as [word] in a terminal; the markers themselves are control characters.
+        let snippet = hit.snippet.replace(HIGHLIGHT_START, "[").replace(HIGHLIGHT_END, "]");
+        println!("  [{}] {}  @{}\n      {snippet}", hit.agent, hit.path.display(), hit.byte_offset);
     }
     Ok(())
 }

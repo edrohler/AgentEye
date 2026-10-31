@@ -11,6 +11,7 @@ license = "MIT OR Apache-2.0"
 
 [workspace.dependencies]
 agenteye-core = { path = "crates/agenteye-core" }
+agenteye-engine = { path = "crates/agenteye-engine" }
 agenteye-index = { path = "crates/agenteye-index" }
 agenteye-sources = { path = "crates/agenteye-sources" }
 

@@ -13,6 +13,7 @@ name = "agenteye-app"
 version = "0.1.0"
 dependencies = [
  "agenteye-core",
+ "agenteye-engine",
  "agenteye-sources",
  "tauri",
  "tauri-build",
@@ -23,6 +24,7 @@ name = "agenteye-cli"
 version = "0.1.0"
 dependencies = [
  "agenteye-core",
+ "agenteye-engine",
  "agenteye-index",
  "agenteye-sources",
  "anyhow",
@@ -38,12 +40,27 @@ dependencies = [
 ]
 
 [[package]]
+name = "agenteye-engine"
+version = "0.1.0"
+dependencies = [
+ "agenteye-core",
+ "agenteye-index",
+ "agenteye-sources",
+ "serde",
+ "serde_json",
+ "tempfile",
+ "thiserror 2.0.21",
+ "tracing",
+]
+
+[[package]]
 name = "agenteye-index"
 version = "0.1.0"
 dependencies = [
  "agenteye-core",
  "agenteye-sources",
  "rusqlite",
+ "serde",
  "tempfile",
  "thiserror 2.0.21",
 ]

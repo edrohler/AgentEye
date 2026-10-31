@@ -10,7 +10,7 @@ type AgentFilter = AgentKind | 'all';
   selector: 'app-session-list',
   imports: [DatePipe],
   templateUrl: './session-list.html',
-  styleUrl: './session-list.scss',
+  host: { class: 'block px-6 py-4' },
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class SessionList implements OnInit {
