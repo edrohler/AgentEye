@@ -51,7 +51,7 @@ jobs:
 
       # The Tauri crate embeds the built UI at compile time, so the Rust jobs need it.
       - name: Upload the built UI
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: ui-dist
           path: ui/dist/ui/browser
@@ -84,7 +84,7 @@ jobs:
         uses: Swatinem/rust-cache@v2
 
       - name: Download the built UI
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: ui-dist
           path: ui/dist/ui/browser
@@ -181,7 +181,7 @@ jobs:
         run: ./eng/Collect-Packages.ps1 -Version '${{ needs.version.outputs.base }}' -Platform '${{ matrix.platform }}'
 
       - name: Upload installers
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: packages-${{ matrix.platform }}
           path: artifacts/packages
@@ -207,7 +207,7 @@ jobs:
           persist-credentials: false
 
       - name: Download installers
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           pattern: packages-*
           merge-multiple: true

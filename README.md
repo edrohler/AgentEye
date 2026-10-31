@@ -50,7 +50,7 @@ nvm install 24.15.0; nvm use 24.15.0            # nvm-windows
 - Visual Studio (or Build Tools) with the **Desktop development with C++** workload (MSVC and Windows SDK)
 - WebView2 (included in Windows 11)
 
-**Linux**: Rust via [rustup](https://rustup.rs), Node 24.15+ (for example via nvm), and the WebKitGTK packages from ![https://v2.tauri.app/start/prerequisites/](https://v2.tauri.app/start/prerequisites/).
+**Linux**: Rust via [rustup](https://rustup.rs), Node 24.15+ (for example via nvm), and the WebKitGTK packages from [https://v2.tauri.app/start/prerequisites/](https://v2.tauri.app/start/prerequisites/).
 
 Check your setup:
 
@@ -91,8 +91,8 @@ Set `CLAUDE_CONFIG_DIR` / `CODEX_HOME` to override the default `~/.claude` / `~/
 
 Licensed under either of
 
-- Apache License, Version 2.0 ([LICENSE-APACHE](LICENSE-APACHE) or ![http://www.apache.org/licenses/LICENSE-2.0](http://www.apache.org/licenses/LICENSE-2.0))
-- MIT license ([LICENSE-MIT](LICENSE-MIT) or ![http://opensource.org/licenses/MIT](http://opensource.org/licenses/MIT))
+- Apache License, Version 2.0 ([LICENSE-APACHE](LICENSE-APACHE) or [http://www.apache.org/licenses/LICENSE-2.0](http://www.apache.org/licenses/LICENSE-2.0))
+- MIT license ([LICENSE-MIT](LICENSE-MIT) or [http://opensource.org/licenses/MIT](http://opensource.org/licenses/MIT))
 
 at your option.
 
