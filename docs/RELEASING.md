@@ -17,12 +17,13 @@ Make these required checks in the repository's branch protection rules for `main
 
 Each commit that lands on `main` is validated again. If everything passes, the same workflow:
 
-1. Works out the version this commit would release (see Versioning below).
-2. Builds installers on Windows (NSIS `.exe`) and Linux (`.deb` and `.AppImage`) with that version stamped in.
-3. Publishes a **pre-release** tagged `X.Y.Z-rc.N` with the installers and a `.sha256` file for each.
-4. Deletes older candidates, keeping the **newest 3**.
+1. **Prepare:** works out the version this commit would release (see Versioning below) and the candidate number, and creates a draft pre-release tagged `X.Y.Z-rc.N`.
+2. **Package:** builds installers on Windows (NSIS `.exe`) and Linux (`.deb` and `.AppImage`) with that version stamped in, and attaches them, each with a `.sha256` file, to the draft.
+3. **Publish:** publishes the pre-release and deletes older candidates, keeping the **newest 3**.
 
 Candidates are for trying a build, not for end users.
+
+**Nothing is uploaded as a workflow artifact.** Pull requests, and the validation part of every `main` run, upload nothing: the Rust jobs build their own copy of the UI instead of receiving one. The only files the pipeline ever publishes are the installers attached to a release candidate or a release. If a run fails after the draft is created, the unpublished draft is deleted by the next successful run.
 
 ## Manual release: Release
 
