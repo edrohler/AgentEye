@@ -1,0 +1,21 @@
+[package]
+name = "agenteye-sources"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+publish.workspace = true
+
+[dependencies]
+agenteye-core.workspace = true
+dirs.workspace = true
+rayon.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+tracing.workspace = true
+walkdir.workspace = true
+
+[dev-dependencies]
+tempfile.workspace = true
+
+[lints]
+workspace = true

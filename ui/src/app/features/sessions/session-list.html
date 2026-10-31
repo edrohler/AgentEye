@@ -1,0 +1,36 @@
+<header class="toolbar">
+  <h1>AgentEye</h1>
+  <div class="filters" role="group" aria-label="Filter by agent">
+    @for (option of filters; track option) {
+      <button type="button" [class.active]="filter() === option" (click)="setFilter(option)">
+        {{ option }}
+      </button>
+    }
+  </div>
+  <button type="button" (click)="refresh()" [disabled]="loading()">Refresh</button>
+</header>
+
+@if (error(); as message) {
+  <p class="error" role="alert">{{ message }}</p>
+}
+
+@if (loading() && visibleSessions().length === 0) {
+  <p class="status">Loading sessions…</p>
+} @else if (visibleSessions().length === 0) {
+  <p class="status">No sessions found.</p>
+} @else {
+  <ul class="sessions">
+    @for (session of visibleSessions(); track session.path) {
+      <li>
+        <span class="agent" [attr.data-agent]="session.agent">{{ session.agent }}</span>
+        <div class="details">
+          <span class="title">{{ session.title ?? '(untitled)' }}</span>
+          <span class="meta">{{ session.cwd ?? session.path }}</span>
+        </div>
+        <span class="meta">{{ session.model ?? '' }}</span>
+        <span class="meta">{{ formatSize(session.sizeBytes) }}</span>
+        <span class="meta">{{ session.lastActivityMs | date: 'short' }}</span>
+      </li>
+    }
+  </ul>
+}
