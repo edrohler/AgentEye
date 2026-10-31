@@ -8,7 +8,7 @@ Desktop app for browsing, searching and monitoring AI agent sessions (Claude Cod
 ## Stack
 
 | Layer | Technology | Version |
-|---|---|---|
+| --- | --- | --- |
 | Core | Rust (stable, edition 2021) | 1.99+ (workspace minimum 1.82) |
 | Desktop shell | Tauri | 2.x |
 | Frontend | Angular (standalone, signals, zoneless) | 22.x |
@@ -25,7 +25,7 @@ Desktop app for browsing, searching and monitoring AI agent sessions (Claude Cod
 ## Layout
 
 | Path | Purpose |
-|---|---|
+| --- | --- |
 | `crates/agenteye-core` | Domain types and the `SessionSource` trait. No I/O. |
 | `crates/agenteye-sources` | Claude and Codex adapters, JSONL tailing, `Catalog`. |
 | `crates/agenteye-index` | SQLite FTS5 search index with incremental sync. |
@@ -47,7 +47,7 @@ nvm install 24.15.0; nvm use 24.15.0            # nvm-windows
 - Visual Studio (or Build Tools) with the **Desktop development with C++** workload (MSVC and Windows SDK)
 - WebView2 (included in Windows 11)
 
-**Linux**: Rust via [rustup](https://rustup.rs), Node 24.15+ (for example via nvm), and the WebKitGTK packages from https://v2.tauri.app/start/prerequisites/.
+**Linux**: Rust via [rustup](https://rustup.rs), Node 24.15+ (for example via nvm), and the WebKitGTK packages from ![https://v2.tauri.app/start/prerequisites/](https://v2.tauri.app/start/prerequisites/).
 
 Check your setup:
 
@@ -83,3 +83,16 @@ cargo run --release -p agenteye-cli -- search --db agenteye.db "some words"
 ```
 
 Set `CLAUDE_CONFIG_DIR` / `CODEX_HOME` to override the default `~/.claude` / `~/.codex` locations.
+
+## License
+
+Licensed under either of
+
+- Apache License, Version 2.0 ([LICENSE-APACHE](LICENSE-APACHE) or ![http://www.apache.org/licenses/LICENSE-2.0](http://www.apache.org/licenses/LICENSE-2.0))
+- MIT license ([LICENSE-MIT](LICENSE-MIT) or ![http://opensource.org/licenses/MIT](http://opensource.org/licenses/MIT))
+
+at your option.
+
+### Contribution
+
+Unless you explicitly state otherwise, any contribution intentionally submitted for inclusion in this project by you, as defined in the Apache-2.0 license, shall be dual licensed as above, without any additional terms or conditions.
