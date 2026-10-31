@@ -4,6 +4,7 @@ Desktop app for browsing, searching and monitoring AI agent sessions (Claude Cod
 
 - Design notes and decisions: [docs/IDEATION.md](docs/IDEATION.md)
 - Contributor and AI-agent guidelines (Rust, Angular, SOLID/DRY): [AGENTS.md](AGENTS.md)
+- Pull request checks, release candidates and manual releases: [docs/RELEASING.md](docs/RELEASING.md)
 
 ## Stack
 

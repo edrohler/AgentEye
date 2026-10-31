@@ -1,0 +1,264 @@
+name: Validate
+
+# Pull requests are validated. Every commit that lands on main is validated again and, if everything passes, becomes a
+# release candidate (a pre-release with Windows and Linux installers). The Release workflow promotes one of those.
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: validate-${{ github.workflow }}-${{ github.ref }}
+  # Only superseded pull-request runs are cancelled: stopping a main run could leave a half-published release candidate.
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  ui:
+    name: UI build and test
+    # Windows has Chrome and Edge ready for Karma, and the build output is the same on every platform.
+    runs-on: windows-latest
+
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v5
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v5
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: ui/package-lock.json
+
+      - name: Install dependencies
+        working-directory: ui
+        run: npm ci
+
+      - name: Build
+        working-directory: ui
+        run: npm run build
+
+      - name: Test
+        working-directory: ui
+        run: npm test -- --watch=false --browsers=ChromeHeadless
+
+      # The Tauri crate embeds the built UI at compile time, so the Rust jobs need it.
+      - name: Upload the built UI
+        uses: actions/upload-artifact@v4
+        with:
+          name: ui-dist
+          path: ui/dist/ui/browser
+          if-no-files-found: error
+          retention-days: 1
+
+  rust:
+    name: Rust (${{ matrix.os }})
+    needs: ui
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v5
+
+      - name: Install Linux build dependencies
+        if: ${{ runner.os == 'Linux' }}
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y build-essential curl wget file libwebkit2gtk-4.1-dev libxdo-dev libssl-dev libayatana-appindicator3-dev librsvg2-dev
+
+      - name: Install Rust
+        run: rustup toolchain install stable --profile minimal --component clippy,rustfmt
+
+      - name: Cache Rust build output
+        uses: Swatinem/rust-cache@v2
+
+      - name: Download the built UI
+        uses: actions/download-artifact@v4
+        with:
+          name: ui-dist
+          path: ui/dist/ui/browser
+
+      - name: Check formatting
+        run: cargo fmt --all --check
+
+      - name: Lint
+        run: cargo clippy --workspace --all-targets --locked -- -D warnings
+
+      - name: Test
+        run: cargo test --workspace --locked
+
+  version:
+    name: Next release version
+    needs: [ui, rust]
+    if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
+    runs-on: ubuntu-latest
+    outputs:
+      base: ${{ steps.version.outputs.base }}
+
+    steps:
+      - name: Check out main
+        uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Determine the version this commit would release
+        id: version
+        shell: pwsh
+        run: ./eng/Get-NextVersion.ps1
+
+  package:
+    name: Package (${{ matrix.platform }})
+    needs: version
+    strategy:
+      fail-fast: true
+      matrix:
+        include:
+          - os: windows-latest
+            platform: windows-x64
+            bundles: nsis
+          - os: ubuntu-latest
+            platform: linux-x64
+            bundles: deb,appimage
+    runs-on: ${{ matrix.os }}
+    env:
+      # AppImage tooling needs FUSE, which hosted runners lack; this makes it unpack and run in place instead.
+      APPIMAGE_EXTRACT_AND_RUN: 1
+      NO_STRIP: true
+
+    steps:
+      - name: Check out main
+        uses: actions/checkout@v5
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v5
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: |
+            package-lock.json
+            ui/package-lock.json
+
+      - name: Install Linux build dependencies
+        if: ${{ runner.os == 'Linux' }}
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y build-essential curl wget file libwebkit2gtk-4.1-dev libxdo-dev libssl-dev libayatana-appindicator3-dev librsvg2-dev
+
+      - name: Install Rust
+        run: rustup toolchain install stable --profile minimal
+
+      - name: Cache Rust build output
+        uses: Swatinem/rust-cache@v2
+
+      - name: Install dependencies
+        run: |
+          npm ci
+          npm ci --prefix ui
+
+      # The version is stamped on this throwaway checkout only; nothing is committed. The candidate number goes in the file
+      # name, not the app, so promoting a candidate to a release does not change the installers.
+      - name: Stamp the release version
+        shell: pwsh
+        run: ./eng/Set-Version.ps1 -Version '${{ needs.version.outputs.base }}'
+
+      - name: Build installers
+        run: npm run tauri -- build --bundles ${{ matrix.bundles }}
+
+      - name: Collect installers
+        shell: pwsh
+        run: ./eng/Collect-Packages.ps1 -Version '${{ needs.version.outputs.base }}' -Platform '${{ matrix.platform }}'
+
+      - name: Upload installers
+        uses: actions/upload-artifact@v4
+        with:
+          name: packages-${{ matrix.platform }}
+          path: artifacts/packages
+          if-no-files-found: error
+          retention-days: 7
+
+  release-candidate:
+    name: Publish release candidate
+    needs: [version, package]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    # One at a time, so two quick merges cannot pick the same candidate number.
+    concurrency:
+      group: release-candidate
+      cancel-in-progress: false
+
+    steps:
+      - name: Check out main
+        uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Download installers
+        uses: actions/download-artifact@v4
+        with:
+          pattern: packages-*
+          merge-multiple: true
+          path: artifacts/packages
+
+      - name: Determine the candidate number
+        id: version
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: ./eng/Get-NextVersion.ps1 -Candidate
+
+      # Names the installers after the candidate and writes a checksum next to each. Renaming does not change the bytes,
+      # so the checksum stays valid when the Release workflow later drops the candidate suffix.
+      - name: Name and checksum the installers
+        shell: pwsh
+        env:
+          BUILT_VERSION: ${{ needs.version.outputs.base }}
+          BASE_VERSION: ${{ steps.version.outputs.base }}
+          CANDIDATE: ${{ steps.version.outputs.candidate }}
+        run: |
+          $ErrorActionPreference = 'Stop'
+          if ($env:BUILT_VERSION -ne $env:BASE_VERSION) {
+            throw "The installers were built as $env:BUILT_VERSION but the next version is now $env:BASE_VERSION. Re-run the workflow."
+          }
+
+          [object[]]$installers = @(Get-ChildItem -File artifacts/packages)
+          if ($installers.Count -eq 0) { throw 'No installers were downloaded.' }
+
+          foreach ($installer in $installers) {
+            $name = $installer.Name -replace "^AgentEye-$([regex]::Escape($env:BASE_VERSION))-", "AgentEye-$env:CANDIDATE-"
+            if ($name -eq $installer.Name) { throw "$($installer.Name) is not named like an installer for $env:BASE_VERSION." }
+            $path = Join-Path $installer.DirectoryName $name
+            Rename-Item $installer.FullName $name
+            $hash = (Get-FileHash -Algorithm SHA256 $path).Hash.ToLowerInvariant()
+            "$hash  $name" | Set-Content -NoNewline "$path.sha256"
+          }
+
+      # Created as a draft, which has no tag, and published last: GitHub then creates the tag at this commit, so a failure
+      # cannot leave a tag without a release.
+      - name: Create and publish the pre-release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          CANDIDATE: ${{ steps.version.outputs.candidate }}
+        run: |
+          gh release delete "$CANDIDATE" --yes 2>/dev/null || true
+          gh release create "$CANDIDATE" artifacts/packages/* --draft --prerelease --target "$GITHUB_SHA" --title "$CANDIDATE" --generate-notes
+          gh release edit "$CANDIDATE" --draft=false --prerelease
+
+      - name: Keep only the newest three candidates
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: ./eng/Prune-ReleaseCandidates.ps1 -BaseVersion '${{ steps.version.outputs.base }}' -Keep 3

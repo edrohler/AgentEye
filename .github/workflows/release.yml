@@ -1,0 +1,110 @@
+name: Release
+
+# Promotes the release candidate that Validate built for the current main commit. Nothing is rebuilt: the candidate's installers
+# are the ones that were validated, so they are published byte for byte under the release version.
+#
+# To start a new minor or major line, change version.json first and let Validate publish a candidate for that commit.
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+jobs:
+  promote:
+    name: Promote release candidate
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out main
+        uses: actions/checkout@v5
+        with:
+          ref: main
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Find the release candidate for this commit
+        id: candidate
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          [string[]]$candidates = @(git tag --points-at HEAD | Where-Object { $_ -match '^\d+\.\d+\.\d+-rc\.\d+$' })
+          if ($candidates.Count -eq 0) {
+            throw 'main has no release candidate. Wait for the Validate workflow to finish on the latest commit, or fix its failures.'
+          }
+
+          $tag = $candidates | Sort-Object { [int]([regex]::Match($_, '-rc\.(\d+)$').Groups[1].Value) } -Descending | Select-Object -First 1
+          $version = $tag -replace '-rc\.\d+$', ''
+          if (-not [string]::IsNullOrWhiteSpace((git tag --list $version))) {
+            throw "Release $version already exists."
+          }
+
+          [version[]]$released = @(git tag --list | Where-Object { $_ -match '^\d+\.\d+\.\d+$' } | ForEach-Object { [version]$_ })
+          $previous = if ($released.Count -gt 0) { ($released | Sort-Object -Descending)[0].ToString() } else { '' }
+
+          "tag=$tag" >> $env:GITHUB_OUTPUT
+          "version=$version" >> $env:GITHUB_OUTPUT
+          "previous=$previous" >> $env:GITHUB_OUTPUT
+
+      - name: Download and verify the candidate installers
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+          CANDIDATE_TAG: ${{ steps.candidate.outputs.tag }}
+        run: |
+          $ErrorActionPreference = 'Stop'
+          New-Item -ItemType Directory -Force -Path candidate, release | Out-Null
+          gh release download $env:CANDIDATE_TAG --dir candidate
+          if ($LASTEXITCODE -ne 0) { throw "Could not download the assets of $env:CANDIDATE_TAG." }
+
+          [object[]]$installers = @(Get-ChildItem -File candidate | Where-Object { $_.Name -notlike '*.sha256' })
+          if ($installers.Count -eq 0) {
+            throw "$env:CANDIDATE_TAG has no installers."
+          }
+
+          foreach ($installer in $installers) {
+            $checksumPath = "$($installer.FullName).sha256"
+            if (-not (Test-Path -PathType Leaf $checksumPath)) { throw "$($installer.Name) has no checksum file." }
+
+            $expected = ((Get-Content -Raw $checksumPath) -split '\s+')[0]
+            $actual = (Get-FileHash -Algorithm SHA256 $installer.FullName).Hash.ToLowerInvariant()
+            if ($expected -ne $actual) {
+              throw "$($installer.Name) does not match its checksum."
+            }
+
+            # The file bytes do not contain the file name, so renaming keeps the checksum.
+            $name = $installer.Name -replace '-rc\.\d+(?=-)', ''
+            if ($name -eq $installer.Name) { throw "$($installer.Name) is not named like a candidate installer." }
+            Copy-Item $installer.FullName (Join-Path release $name)
+            "$actual  $name" | Set-Content -NoNewline (Join-Path release "$name.sha256")
+          }
+
+      # Created as a draft, which has no tag, and published last: GitHub then creates the tag at this commit, so a failure cannot
+      # leave a release tag without a release.
+      - name: Publish GitHub release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_VERSION: ${{ steps.candidate.outputs.version }}
+          PREVIOUS_VERSION: ${{ steps.candidate.outputs.previous }}
+        run: |
+          notes=()
+          if [ -n "$PREVIOUS_VERSION" ]; then notes=(--notes-start-tag "$PREVIOUS_VERSION"); fi
+          gh release delete "$RELEASE_VERSION" --yes 2>/dev/null || true
+          gh release create "$RELEASE_VERSION" release/* --draft --target "$GITHUB_SHA" --title "$RELEASE_VERSION" --generate-notes "${notes[@]}"
+          gh release edit "$RELEASE_VERSION" --draft=false --latest
+
+      - name: Remove the promoted release candidates
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_VERSION: ${{ steps.candidate.outputs.version }}
+        run: |
+          foreach ($tag in @(git tag --list "$env:RELEASE_VERSION-rc.*")) {
+            gh release delete $tag --cleanup-tag --yes
+            if ($LASTEXITCODE -ne 0) { Write-Warning "Could not remove release candidate $tag." }
+          }
