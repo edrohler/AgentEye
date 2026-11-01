@@ -1,11 +1,14 @@
 //! Claude Code: `<config>/projects/<project>/<session>.jsonl`, append-only.
 
+use std::ffi::OsStr;
 use std::ops::ControlFlow;
 use std::path::{Path, PathBuf};
 
 use agenteye_core::{
-    AgentKind, MessageRecord, Result, Role, SessionFile, SessionSource, SessionSummary,
+    AgentKind, Error, MemoryFile, MemorySource, MessageRecord, Result, Role, SessionFile,
+    SessionSource, SessionSummary,
 };
+
 use serde::Deserialize;
 
 use crate::content::Content;
@@ -47,10 +50,7 @@ impl ClaudeSource {
 
     /// Uses `CLAUDE_CONFIG_DIR` when set, otherwise `~/.claude`.
     pub fn from_env() -> Option<Self> {
-        let config_dir = std::env::var_os("CLAUDE_CONFIG_DIR")
-            .map(PathBuf::from)
-            .or_else(|| dirs::home_dir().map(|home| home.join(".claude")))?;
-        Some(Self::new(config_dir.join("projects")))
+        Some(Self::new(projects_dir_from_env()?))
     }
 }
 
@@ -116,6 +116,26 @@ impl SessionSource for ClaudeSource {
     }
 }
 
+impl MemorySource for ClaudeSource {
+    fn kind(&self) -> AgentKind {
+        AgentKind::Claude
+    }
+
+    fn discover(&self) -> Result<Vec<MemoryFile>> {
+        Ok(fs::discover_md(AgentKind::Claude, &self.projects_dir, 3..=3, ""))
+    }
+
+    fn read(&self, file: &MemoryFile) -> Result<String> {
+        if !file.path.starts_with(&self.projects_dir)
+            || file.path.extension() != Some(OsStr::new("md"))
+        {
+            return Err(Error::PathOutsideRoot { path: file.path.clone() });
+        }
+
+        std::fs::read_to_string(&file.path).map_err(|e| Error::io(&file.path, e))
+    }
+}
+
 fn message_record(offset: u64, raw: &[u8]) -> Option<MessageRecord> {
     let line: Line = jsonl::parse(raw)?;
     let role = Role::from_label(line.kind.as_deref()?)?;
@@ -124,6 +144,14 @@ fn message_record(offset: u64, raw: &[u8]) -> Option<MessageRecord> {
         return None;
     }
     Some(MessageRecord { role, text, timestamp: line.timestamp, offset })
+}
+
+fn projects_dir_from_env() -> Option<PathBuf> {
+    let config_root = std::env::var_os("CLAUDE_CONFIG_DIR")
+        .map(PathBuf::from)
+        .or_else(|| dirs::home_dir().map(|home| home.join(".claude")));
+
+    Some(config_root?.join("projects"))
 }
 
 #[cfg(test)]
@@ -159,7 +187,7 @@ mod tests {
         fs::create_dir_all(&nested).unwrap();
         fs::write(nested.join("agent-1.jsonl"), SESSION).unwrap();
 
-        let files = source.discover().unwrap();
+        let files = SessionSource::discover(&source).unwrap();
         assert_eq!(files.len(), 1);
         assert!(files[0].path.ends_with("abc.jsonl"));
     }
@@ -167,13 +195,13 @@ mod tests {
     #[test]
     fn missing_root_is_empty() {
         let source = ClaudeSource::new("does/not/exist");
-        assert_eq!(source.discover().unwrap(), Vec::new());
+        assert_eq!(SessionSource::discover(&source).unwrap(), Vec::new());
     }
 
     #[test]
     fn summarizes_from_head_and_tail() {
         let (_dir, source) = source_with_session(SESSION);
-        let file = source.discover().unwrap().remove(0);
+        let file = SessionSource::discover(&source).unwrap().remove(0);
         let summary = source.summarize(&file).unwrap();
 
         assert_eq!(summary.session_id.as_deref(), Some("s1"));
@@ -185,7 +213,7 @@ mod tests {
     #[test]
     fn scans_only_user_and_assistant_text() {
         let (_dir, source) = source_with_session(SESSION);
-        let file = source.discover().unwrap().remove(0);
+        let file = SessionSource::discover(&source).unwrap().remove(0);
 
         let mut records = Vec::new();
         let end = source.scan_messages(&file.path, 0, &mut |r| records.push(r)).unwrap();
@@ -197,5 +225,93 @@ mod tests {
         assert_eq!(records[0].offset, 0);
         assert_eq!(records[1].role, Role::Assistant);
         assert_eq!(records[1].text, "Done.");
+    }
+
+    const MEMORY: &str = "---\nname: note\ntype: project\n---\nbody\n";
+
+    /// `proj/memory/{MEMORY.md,a.md,notes.txt,sub/b.md}` plus `proj/other/c.md`.
+    fn source_with_memory() -> (tempfile::TempDir, ClaudeSource) {
+        let dir = tempfile::tempdir().unwrap();
+        let memory = dir.path().join("proj").join("memory");
+        fs::create_dir_all(memory.join("sub")).unwrap();
+        fs::create_dir_all(dir.path().join("proj").join("other")).unwrap();
+        fs::write(memory.join("MEMORY.md"), "- [a](a.md)\n").unwrap();
+        fs::write(memory.join("a.md"), MEMORY).unwrap();
+        fs::write(memory.join("notes.txt"), "ignored").unwrap();
+        fs::write(memory.join("sub").join("b.md"), MEMORY).unwrap();
+        fs::write(dir.path().join("proj").join("other").join("c.md"), MEMORY).unwrap();
+        let source = ClaudeSource::new(dir.path());
+        (dir, source)
+    }
+
+    #[test]
+    fn discovers_memory_files_directly_under_memory_dir() {
+        let (_dir, source) = source_with_memory();
+
+        let mut files = MemorySource::discover(&source).unwrap();
+        files.sort_by(|a, b| a.name.cmp(&b.name));
+
+        let names: Vec<_> = files.iter().map(|f| f.name.as_str()).collect();
+        assert_eq!(names, ["MEMORY.md", "a.md"]);
+        assert!(files.iter().all(|f| f.project == "proj"));
+        assert!(files.iter().all(|f| f.agent == AgentKind::Claude));
+        assert_eq!(files[1].size_bytes, MEMORY.len() as u64);
+    }
+
+    #[test]
+    fn missing_memory_root_is_empty() {
+        let source = ClaudeSource::new("does/not/exist");
+        assert_eq!(MemorySource::discover(&source).unwrap(), Vec::new());
+    }
+
+    #[test]
+    fn project_without_memory_dir_is_empty() {
+        let (dir, source) = source_with_session(SESSION);
+        assert!(dir.path().join("proj").is_dir());
+        assert_eq!(MemorySource::discover(&source).unwrap(), Vec::new());
+    }
+
+    #[test]
+    fn reads_discovered_memory_file() {
+        let (_dir, source) = source_with_memory();
+        let file = MemorySource::discover(&source)
+            .unwrap()
+            .into_iter()
+            .find(|f| f.name == "a.md")
+            .unwrap();
+
+        assert_eq!(source.read(&file).unwrap(), MEMORY);
+    }
+
+    #[test]
+    fn read_rejects_path_outside_root() {
+        let (_dir, source) = source_with_memory();
+        let other = tempfile::tempdir().unwrap();
+        fs::write(other.path().join("x.md"), MEMORY).unwrap();
+        let mut file = MemorySource::discover(&source).unwrap().remove(0);
+        file.path = other.path().join("x.md");
+
+        let err = source.read(&file).unwrap_err();
+        assert!(matches!(err, Error::PathOutsideRoot { .. }));
+    }
+
+    #[test]
+    fn read_rejects_non_markdown_file() {
+        let (dir, source) = source_with_memory();
+        let mut file = MemorySource::discover(&source).unwrap().remove(0);
+        file.path = dir.path().join("proj").join("memory").join("notes.txt");
+
+        let err = source.read(&file).unwrap_err();
+        assert!(matches!(err, Error::PathOutsideRoot { .. }));
+    }
+
+    #[test]
+    fn read_of_vanished_file_is_io_error() {
+        let (_dir, source) = source_with_memory();
+        let file = MemorySource::discover(&source).unwrap().remove(0);
+        fs::remove_file(&file.path).unwrap();
+
+        let err = source.read(&file).unwrap_err();
+        assert!(matches!(err, Error::Io { .. }));
     }
 }
