@@ -12,7 +12,8 @@ pub enum Error {
         #[source]
         source: std::io::Error,
     },
-
+    #[error("path outside root: {}:", path.display())]
+    PathOutsideRoot { path: PathBuf },
     #[error("unknown agent `{0}`")]
     UnknownAgent(String),
 }

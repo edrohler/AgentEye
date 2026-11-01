@@ -1,6 +1,6 @@
 use std::path::Path;
 
-use crate::{AgentKind, MessageRecord, Result, SessionFile, SessionSummary};
+use crate::{AgentKind, MemoryFile, MessageRecord, Result, SessionFile, SessionSummary};
 
 /// Adapter for one agent's on-disk session format.
 ///
@@ -25,4 +25,15 @@ pub trait SessionSource: Send + Sync {
         from_offset: u64,
         sink: &mut dyn FnMut(MessageRecord),
     ) -> Result<u64>;
+}
+
+/// Adapter for one agent's on-disk memory format.
+///
+/// Implementations must be read-only and must never hold a file open longer than a call.
+pub trait MemorySource: Send + Sync {
+    fn kind(&self) -> AgentKind;
+    /// A missing root yields an empty list, not an error.
+    fn discover(&self) -> Result<Vec<MemoryFile>>;
+    /// Whole file content. Errors if `file` is outside this source's root.
+    fn read(&self, file: &MemoryFile) -> Result<String>;
 }
