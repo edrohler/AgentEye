@@ -5,15 +5,17 @@
 //! agenteye open claude <path>             # tier 2: parse one session in memory
 //! agenteye index --db agenteye.db         # tier 3: build or refresh the search index
 //! agenteye search --db agenteye.db "text" # query the index
+//! agenteye memory list                    # list agent memory files
+//! agenteye memory show <path>             # print one memory file
 //! ```
 
 use std::path::{Path, PathBuf};
-use std::time::{Duration, Instant};
+use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
 
 use agenteye_core::AgentKind;
 use agenteye_engine::Engine;
 use agenteye_index::{Index, HIGHLIGHT_END, HIGHLIGHT_START};
-use agenteye_sources::Catalog;
+use agenteye_sources::{Catalog, MemoryCatalog};
 use anyhow::{bail, Context, Result};
 use clap::{Parser, Subcommand};
 
@@ -43,6 +45,19 @@ enum Command {
         limit: usize,
         query: String,
     },
+    /// Agent memory files (Claude Code only).
+    Memory {
+        #[command(subcommand)]
+        action: MemoryCommand,
+    },
+}
+
+#[derive(Subcommand)]
+enum MemoryCommand {
+    /// List every memory file, newest first.
+    List,
+    /// Print one memory file; `path` is as shown by `memory list`.
+    Show { path: PathBuf },
 }
 
 fn main() -> Result<()> {
@@ -54,6 +69,11 @@ fn main() -> Result<()> {
         Command::Open { agent, path } => open(agent, &path),
         Command::Index { db } => index(&db),
         Command::Search { db, limit, query } => search(&db, limit, &query),
+        Command::Memory { action: MemoryCommand::List } => {
+            memory_list();
+            Ok(())
+        }
+        Command::Memory { action: MemoryCommand::Show { path } } => memory_show(&path),
     }
 }
 
@@ -149,6 +169,49 @@ fn search(db: &Path, limit: usize, query: &str) -> Result<()> {
     Ok(())
 }
 
+fn memory_list() {
+    let files = MemoryCatalog::from_env().discover();
+
+    println!("found {} memory files", files.len());
+    for file in &files {
+        println!(
+            "  [{}] {}/{}  {}  {}  {}",
+            file.agent,
+            file.project,
+            file.name,
+            age(file.modified_ms),
+            kilobytes(file.size_bytes),
+            file.path.display()
+        );
+    }
+}
+
+fn memory_show(path: &Path) -> Result<()> {
+    let catalog = MemoryCatalog::from_env();
+    // Only files that discovery found can be read, so an arbitrary path never reaches `read`.
+    let Some(file) = catalog.discover().into_iter().find(|file| file.path == path) else {
+        bail!("{} is not a known memory file; see `memory list`", path.display());
+    };
+
+    let content = catalog.read(&file).with_context(|| format!("reading {}", path.display()))?;
+    print!("{content}");
+    Ok(())
+}
+
+/// How long ago a file changed, as a short readout such as `3h ago`.
+fn age(modified_ms: i64) -> String {
+    let now_ms = SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .map_or(0, |d| i64::try_from(d.as_millis()).unwrap_or(i64::MAX));
+    let seconds = (now_ms - modified_ms).max(0) / 1000;
+    match seconds {
+        0..60 => format!("{seconds}s ago"),
+        60..3_600 => format!("{}m ago", seconds / 60),
+        3_600..86_400 => format!("{}h ago", seconds / 3_600),
+        _ => format!("{}d ago", seconds / 86_400),
+    }
+}
+
 /// Bytes as mebibytes for display. Precision loss above 2^52 bytes is irrelevant for a readout.
 #[allow(clippy::cast_precision_loss)]
 fn to_megabytes(bytes: u64) -> f64 {
@@ -157,6 +220,10 @@ fn to_megabytes(bytes: u64) -> f64 {
 
 fn megabytes(bytes: u64) -> String {
     format!("{:.1} MB", to_megabytes(bytes))
+}
+
+fn kilobytes(bytes: u64) -> String {
+    format!("{} KB", bytes.div_ceil(1024))
 }
 
 fn millis(duration: Duration) -> String {
