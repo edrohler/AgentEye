@@ -3,6 +3,10 @@ use agenteye_core::{AgentKind, Error, MemoryFile, MemorySource, Result};
 
 use tracing::warn;
 
+/// All configured agent memory sources, queried together.
+///
+/// Separate from [`crate::Catalog`] on purpose: only agents that keep memory files are
+/// registered here, so an agent without them (Codex) is simply absent.
 pub struct MemoryCatalog {
     sources: Vec<Box<dyn MemorySource>>,
 }
@@ -12,6 +16,8 @@ impl MemoryCatalog {
         Self { sources }
     }
 
+    /// Every agent with memory support, located via its standard environment variable or home
+    /// directory. Currently Claude Code only.
     pub fn from_env() -> Self {
         let mut sources: Vec<Box<dyn MemorySource>> = Vec::new();
         if let Some(source) = ClaudeSource::from_env() {
@@ -20,11 +26,12 @@ impl MemoryCatalog {
         Self::new(sources)
     }
 
+    /// The source registered for `kind`, if any.
     pub fn source(&self, kind: AgentKind) -> Option<&dyn MemorySource> {
         self.sources.iter().find(|s| s.kind() == kind).map(Box::as_ref)
     }
 
-    /// Memory fields from every source, newest first. A failing source is logged and skipped.
+    /// Memory files from every source, newest first. A failing source is logged and skipped.
     pub fn discover(&self) -> Vec<MemoryFile> {
         let mut files: Vec<MemoryFile> = self
             .sources
@@ -41,6 +48,10 @@ impl MemoryCatalog {
     }
 
     /// Whole content of `file`, read through the source for its agent.
+    ///
+    /// # Errors
+    /// [`Error::MemorySourceNotFound`] if no source is registered for `file.agent`; otherwise
+    /// whatever the source returns, for example [`Error::PathOutsideRoot`] or [`Error::Io`].
     pub fn read(&self, file: &MemoryFile) -> Result<String> {
         self.source(file.agent).ok_or(Error::MemorySourceNotFound(file.agent))?.read(file)
     }
