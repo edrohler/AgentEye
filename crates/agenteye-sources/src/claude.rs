@@ -2,7 +2,7 @@
 
 use std::ffi::OsStr;
 use std::ops::ControlFlow;
-use std::path::{Path, PathBuf};
+use std::path::{Component, Path, PathBuf};
 
 use agenteye_core::{
     AgentKind, Error, MemoryFile, MemorySource, MessageRecord, Result, Role, SessionFile,
@@ -126,8 +126,10 @@ impl MemorySource for ClaudeSource {
     }
 
     fn read(&self, file: &MemoryFile) -> Result<String> {
+        // `starts_with` compares components without resolving `..`, so reject those outright.
         if !file.path.starts_with(&self.projects_dir)
             || file.path.extension() != Some(OsStr::new("md"))
+            || file.path.components().any(|part| part == Component::ParentDir)
         {
             return Err(Error::PathOutsideRoot { path: file.path.clone() });
         }
@@ -290,6 +292,23 @@ mod tests {
         fs::write(other.path().join("x.md"), MEMORY).unwrap();
         let mut file = MemorySource::discover(&source).unwrap().remove(0);
         file.path = other.path().join("x.md");
+
+        let err = source.read(&file).unwrap_err();
+        assert!(matches!(err, Error::PathOutsideRoot { .. }));
+    }
+
+    #[test]
+    fn read_rejects_parent_dir_escape() {
+        let dir = tempfile::tempdir().unwrap();
+        let root = dir.path().join("root");
+        let memory = root.join("proj").join("memory");
+        fs::create_dir_all(&memory).unwrap();
+        fs::write(memory.join("a.md"), MEMORY).unwrap();
+        fs::write(dir.path().join("secret.md"), "secret").unwrap();
+        let source = ClaudeSource::new(&root);
+        let mut file = MemorySource::discover(&source).unwrap().remove(0);
+        // Starts with the root and exists, but resolves to a file outside it.
+        file.path = root.join("..").join("secret.md");
 
         let err = source.read(&file).unwrap_err();
         assert!(matches!(err, Error::PathOutsideRoot { .. }));
