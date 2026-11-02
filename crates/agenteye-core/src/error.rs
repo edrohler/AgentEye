@@ -1,3 +1,4 @@
+use crate::AgentKind;
 use std::path::PathBuf;
 
 use thiserror::Error;
@@ -12,7 +13,10 @@ pub enum Error {
         #[source]
         source: std::io::Error,
     },
-
+    #[error("path outside root: {}", path.display())]
+    PathOutsideRoot { path: PathBuf },
+    #[error("no memory source found for agent `{0}`")]
+    MemorySourceNotFound(AgentKind),
     #[error("unknown agent `{0}`")]
     UnknownAgent(String),
 }

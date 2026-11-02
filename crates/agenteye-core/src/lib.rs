@@ -5,10 +5,12 @@
 
 mod agent;
 mod error;
+mod memory;
 mod session;
 mod source;
 
 pub use agent::AgentKind;
 pub use error::{Error, Result};
+pub use memory::{MemoryFile, MemoryHeader};
 pub use session::{MessageRecord, Role, SessionFile, SessionSummary};
-pub use source::SessionSource;
+pub use source::{MemorySource, SessionSource};
