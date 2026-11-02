@@ -2,7 +2,7 @@
 
 use std::ffi::OsStr;
 use std::ops::ControlFlow;
-use std::path::{Component, Path, PathBuf};
+use std::path::{Path, PathBuf};
 
 use agenteye_core::{
     AgentKind, Error, MemoryFile, MemorySource, MessageRecord, Result, Role, SessionFile,
@@ -126,15 +126,16 @@ impl MemorySource for ClaudeSource {
     }
 
     fn read(&self, file: &MemoryFile) -> Result<String> {
-        // `starts_with` compares components without resolving `..`, so reject those outright.
-        if !file.path.starts_with(&self.projects_dir)
-            || file.path.extension() != Some(OsStr::new("md"))
-            || file.path.components().any(|part| part == Component::ParentDir)
-        {
+        // Resolve symlinks and `..` on both sides so containment is checked on real locations,
+        // then read the resolved path so a symlink cannot be swapped in after the check.
+        let resolved = std::fs::canonicalize(&file.path).map_err(|e| Error::io(&file.path, e))?;
+        let root = std::fs::canonicalize(&self.projects_dir)
+            .map_err(|e| Error::io(&self.projects_dir, e))?;
+        if !resolved.starts_with(&root) || resolved.extension() != Some(OsStr::new("md")) {
             return Err(Error::PathOutsideRoot { path: file.path.clone() });
         }
 
-        std::fs::read_to_string(&file.path).map_err(|e| Error::io(&file.path, e))
+        std::fs::read_to_string(&resolved).map_err(|e| Error::io(&file.path, e))
     }
 }
 
@@ -312,6 +313,40 @@ mod tests {
 
         let err = source.read(&file).unwrap_err();
         assert!(matches!(err, Error::PathOutsideRoot { .. }));
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn read_rejects_symlink_escaping_root() {
+        let dir = tempfile::tempdir().unwrap();
+        let root = dir.path().join("root");
+        let memory = root.join("proj").join("memory");
+        fs::create_dir_all(&memory).unwrap();
+        fs::write(dir.path().join("secret.md"), "secret").unwrap();
+        std::os::unix::fs::symlink(dir.path().join("secret.md"), memory.join("link.md")).unwrap();
+        let source = ClaudeSource::new(&root);
+        let file = MemorySource::discover(&source)
+            .unwrap()
+            .into_iter()
+            .find(|f| f.name == "link.md")
+            .unwrap();
+
+        let err = source.read(&file).unwrap_err();
+        assert!(matches!(err, Error::PathOutsideRoot { .. }));
+    }
+
+    #[test]
+    fn reads_when_configured_root_contains_parent_dir() {
+        let dir = tempfile::tempdir().unwrap();
+        let memory = dir.path().join("root").join("proj").join("memory");
+        fs::create_dir_all(&memory).unwrap();
+        fs::create_dir_all(dir.path().join("elsewhere")).unwrap();
+        fs::write(memory.join("a.md"), MEMORY).unwrap();
+        let root = dir.path().join("elsewhere").join("..").join("root");
+        let source = ClaudeSource::new(root);
+        let file = MemorySource::discover(&source).unwrap().remove(0);
+
+        assert_eq!(source.read(&file).unwrap(), MEMORY);
     }
 
     #[test]
