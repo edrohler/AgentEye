@@ -322,14 +322,13 @@ mod tests {
         let root = dir.path().join("root");
         let memory = root.join("proj").join("memory");
         fs::create_dir_all(&memory).unwrap();
+        fs::write(memory.join("a.md"), MEMORY).unwrap();
         fs::write(dir.path().join("secret.md"), "secret").unwrap();
         std::os::unix::fs::symlink(dir.path().join("secret.md"), memory.join("link.md")).unwrap();
         let source = ClaudeSource::new(&root);
-        let file = MemorySource::discover(&source)
-            .unwrap()
-            .into_iter()
-            .find(|f| f.name == "link.md")
-            .unwrap();
+        // Discovery skips symlinks, but `MemoryFile` is public so `read` must not trust its path.
+        let mut file = MemorySource::discover(&source).unwrap().remove(0);
+        file.path = memory.join("link.md");
 
         let err = source.read(&file).unwrap_err();
         assert!(matches!(err, Error::PathOutsideRoot { .. }));
