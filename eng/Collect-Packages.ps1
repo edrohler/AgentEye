@@ -5,7 +5,7 @@ Copies the installers Tauri built into one folder with predictable names.
 
 .DESCRIPTION
 Tauri writes installers under target/release/bundle/<format>/ with names that depend on the
-format. This gathers the ones we ship, names them AgentEye-<version>-<platform>.<extension> so
+format. This gathers the ones we ship, names them ScopeSix-<version>-<platform>.<extension> so
 the release workflows can rely on one naming scheme, and writes a .sha256 file next to each.
 Renaming a file later (the Release workflow drops the -rc.N part) does not change its bytes, so
 the checksum stays valid.
@@ -49,7 +49,7 @@ foreach ($format in $formats) {
         throw "Expected exactly one $pattern in $bundleRoot/$folder, found $($found.Count)."
     }
 
-    [string]$name = "AgentEye-$Version-$Platform$suffix"
+    [string]$name = "ScopeSix-$Version-$Platform$suffix"
     [string]$destination = Join-Path $OutputDirectory $name
     Copy-Item $found[0].FullName $destination
 

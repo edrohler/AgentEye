@@ -1,0 +1,23 @@
+[package]
+name = "scopesix-cli"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+publish.workspace = true
+license.workspace = true
+description = "Developer CLI for benchmarking ScopeSix's discovery, session-open and indexing tiers."
+
+[[bin]]
+name = "scopesix"
+path = "src/main.rs"
+
+[dependencies]
+scopesix-core.workspace = true
+scopesix-engine.workspace = true
+scopesix-index.workspace = true
+scopesix-sources.workspace = true
+anyhow.workspace = true
+clap.workspace = true
+
+[lints]
+workspace = true

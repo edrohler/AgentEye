@@ -1,6 +1,6 @@
 //! Runs the index sync on a background thread and tells the UI how it is going.
 
-use agenteye_engine::{Error, IndexStatus};
+use scopesix_engine::{Error, IndexStatus};
 use tauri::{AppHandle, Emitter, Manager};
 
 use crate::state::AppState;

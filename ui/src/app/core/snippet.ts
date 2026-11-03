@@ -1,6 +1,6 @@
 /**
  * Marks around each match in a search snippet. Control characters are used because they cannot
- * occur in real message text. Mirrors `HIGHLIGHT_START` / `HIGHLIGHT_END` in `agenteye-index`.
+ * occur in real message text. Mirrors `HIGHLIGHT_START` / `HIGHLIGHT_END` in `scopesix-index`.
  */
 export const HIGHLIGHT_START = '\u0002';
 export const HIGHLIGHT_END = '\u0003';

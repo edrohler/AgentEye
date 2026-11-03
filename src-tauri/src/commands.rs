@@ -1,8 +1,8 @@
 //! Commands the webview can call. Each one validates input, calls the engine, and maps errors
 //! to strings; none contains domain logic.
 
-use agenteye_core::SessionSummary;
-use agenteye_engine::{IndexStatus, SearchHit, DEFAULT_SEARCH_LIMIT};
+use scopesix_core::SessionSummary;
+use scopesix_engine::{IndexStatus, SearchHit, DEFAULT_SEARCH_LIMIT};
 use tauri::{AppHandle, State};
 
 use crate::indexing;
