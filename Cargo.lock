@@ -9,77 +9,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "320119579fcad9c21884f5c4861d16174d0e06250625266f50fe6898340abefa"
 
 [[package]]
-name = "agenteye-app"
-version = "0.1.0"
-dependencies = [
- "agenteye-core",
- "agenteye-engine",
- "agenteye-sources",
- "tauri",
- "tauri-build",
-]
-
-[[package]]
-name = "agenteye-cli"
-version = "0.1.0"
-dependencies = [
- "agenteye-core",
- "agenteye-engine",
- "agenteye-index",
- "agenteye-sources",
- "anyhow",
- "clap",
-]
-
-[[package]]
-name = "agenteye-core"
-version = "0.1.0"
-dependencies = [
- "serde",
- "thiserror 2.0.21",
-]
-
-[[package]]
-name = "agenteye-engine"
-version = "0.1.0"
-dependencies = [
- "agenteye-core",
- "agenteye-index",
- "agenteye-sources",
- "serde",
- "serde_json",
- "tempfile",
- "thiserror 2.0.21",
- "tracing",
-]
-
-[[package]]
-name = "agenteye-index"
-version = "0.1.0"
-dependencies = [
- "agenteye-core",
- "agenteye-sources",
- "rusqlite",
- "serde",
- "tempfile",
- "thiserror 2.0.21",
-]
-
-[[package]]
-name = "agenteye-sources"
-version = "0.1.0"
-dependencies = [
- "agenteye-core",
- "dirs 6.0.0",
- "rayon",
- "serde",
- "serde_json",
- "tempfile",
- "tracing",
- "walkdir",
-]
-
-[[package]]
 name = "ahash"
 version = "0.8.12"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2880,6 +2809,77 @@ name = "scopeguard"
 version = "1.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "94143f37725109f92c262ed2cf5e59bce7498c01bcc1502d7b9afe439a4e9f49"
+
+[[package]]
+name = "scopesix-app"
+version = "0.1.0"
+dependencies = [
+ "scopesix-core",
+ "scopesix-engine",
+ "scopesix-sources",
+ "tauri",
+ "tauri-build",
+]
+
+[[package]]
+name = "scopesix-cli"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "clap",
+ "scopesix-core",
+ "scopesix-engine",
+ "scopesix-index",
+ "scopesix-sources",
+]
+
+[[package]]
+name = "scopesix-core"
+version = "0.1.0"
+dependencies = [
+ "serde",
+ "thiserror 2.0.21",
+]
+
+[[package]]
+name = "scopesix-engine"
+version = "0.1.0"
+dependencies = [
+ "scopesix-core",
+ "scopesix-index",
+ "scopesix-sources",
+ "serde",
+ "serde_json",
+ "tempfile",
+ "thiserror 2.0.21",
+ "tracing",
+]
+
+[[package]]
+name = "scopesix-index"
+version = "0.1.0"
+dependencies = [
+ "rusqlite",
+ "scopesix-core",
+ "scopesix-sources",
+ "serde",
+ "tempfile",
+ "thiserror 2.0.21",
+]
+
+[[package]]
+name = "scopesix-sources"
+version = "0.1.0"
+dependencies = [
+ "dirs 6.0.0",
+ "rayon",
+ "scopesix-core",
+ "serde",
+ "serde_json",
+ "tempfile",
+ "tracing",
+ "walkdir",
+]
 
 [[package]]
 name = "selectors"

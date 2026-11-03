@@ -1,4 +1,4 @@
-//! AgentEye desktop shell: a thin Tauri layer over the `agenteye-*` crates.
+//! ScopeSix desktop shell: a thin Tauri layer over the `scopesix-*` crates.
 //!
 //! Commands here only translate between the webview and the engine; domain logic lives in the
 //! crates so it can be tested and benchmarked without a window.
@@ -32,5 +32,5 @@ pub fn run() {
             commands::start_indexing,
         ])
         .run(tauri::generate_context!())
-        .expect("failed to run the AgentEye application");
+        .expect("failed to run the ScopeSix application");
 }

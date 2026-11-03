@@ -1,4 +1,4 @@
-# AgentEyeAi — Ideation (formerly AgentMonitorAi)
+# ScopeSix Ai — Ideation (formerly AgentMonitorAi)
 
 Desktop app to monitor AI agents: their sessions, context, and source activity. Priority: **speed across large volumes of agent sources and sessions**.
 
@@ -11,6 +11,7 @@ Desktop app to monitor AI agents: their sessions, context, and source activity. 
 - Stay out of the way: read-only, low CPU/RAM, no impact on the agents being watched.
 
 ### Non-goals (for v1)
+
 - Controlling or steering agents (read-only first).
 - Cloud sync / multi-user.
 
@@ -19,7 +20,7 @@ Desktop app to monitor AI agents: their sessions, context, and source activity. 
 Most agents already write local logs; monitoring = tailing + indexing them.
 
 | Agent | Typical location | Format |
-|---|---|---|
+| --- | --- | --- |
 | Claude Code | `~/.claude/projects/<proj>/<session>.jsonl` | JSONL, append-only |
 | Codex CLI | `~/.codex/sessions/**/rollout-*.jsonl` | JSONL |
 | Gemini CLI | `~/.gemini/tmp/**` | JSON/JSONL |

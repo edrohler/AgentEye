@@ -1,13 +1,13 @@
 # Releasing
 
-AgentEye uses two GitHub Actions workflows. Both run on GitHub's free hosted runners (`ubuntu-latest`, `windows-latest`).
+ScopeSix uses two GitHub Actions workflows. Both run on GitHub's free hosted runners (`ubuntu-latest`, `windows-latest`).
 
 ## Pull requests: Validate
 
 Every pull request runs `.github/workflows/ci.yml`:
 
 | Job | What it checks |
-|---|---|
+| --- | --- |
 | UI build and test | `npm run build` and `npm test` in `ui` (Windows) |
 | Rust (ubuntu-latest, windows-latest) | `cargo fmt --check`, `cargo clippy -D warnings`, `cargo test` |
 

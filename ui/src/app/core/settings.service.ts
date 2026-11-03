@@ -11,7 +11,7 @@ export const SESSION_PAGE_SIZES: readonly number[] = [50, 100, 250, 500];
 
 const DEFAULT_SESSION_PAGE_SIZE = 100;
 
-const STORAGE_KEY = 'agenteye.settings';
+const STORAGE_KEY = 'scopesix.settings';
 
 /** Everything stored under {@link STORAGE_KEY}. New settings are added here as optional fields. */
 interface StoredSettings {

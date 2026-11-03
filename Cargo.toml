@@ -10,10 +10,10 @@ publish = false
 license = "MIT OR Apache-2.0"
 
 [workspace.dependencies]
-agenteye-core = { path = "crates/agenteye-core" }
-agenteye-engine = { path = "crates/agenteye-engine" }
-agenteye-index = { path = "crates/agenteye-index" }
-agenteye-sources = { path = "crates/agenteye-sources" }
+scopesix-core = { path = "crates/scopesix-core" }
+scopesix-engine = { path = "crates/scopesix-engine" }
+scopesix-index = { path = "crates/scopesix-index" }
+scopesix-sources = { path = "crates/scopesix-sources" }
 
 anyhow = "1"
 clap = { version = "4", features = ["derive"] }

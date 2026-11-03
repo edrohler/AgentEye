@@ -1,10 +1,10 @@
 # AGENTS.md
 
-Guidance for AI coding agents (and humans) working in AgentEye. `CLAUDE.md` imports this file, so this is the single source of truth.
+Guidance for AI coding agents (and humans) working in ScopeSix. `CLAUDE.md` imports this file, so this is the single source of truth.
 
 ## Project
 
-AgentEye is a read-only desktop app for browsing, searching and monitoring AI agent sessions (Claude Code and Codex CLI in v1). Rust core, Tauri 2 shell, Angular UI. Windows and Linux.
+ScopeSix is a read-only desktop app for browsing, searching and monitoring AI agent sessions (Claude Code and Codex CLI in v1). Rust core, Tauri 2 shell, Angular UI. Windows and Linux.
 
 Read [README.md](README.md) for layout and commands and [docs/IDEATION.md](docs/IDEATION.md) for decisions already made. Do not re-litigate those decisions; propose changes explicitly instead.
 
@@ -37,8 +37,8 @@ The maintainer last wrote C++ around 2013 and is using this project to learn Rus
 ### DRY
 
 - Remove duplicated *knowledge* (a format rule, a constant, a mapping), not merely similar-looking code. Wait for the third occurrence before abstracting; a wrong abstraction costs more than duplication.
-- Shared parsing and filesystem logic lives in `agenteye-sources` helpers (`jsonl`, `fs`, `content`, `text`). Check there before writing another.
-- The Rust-to-TypeScript contract is the one place types are mirrored by hand (`SessionSummary` etc.). Keep the TypeScript in `ui/src/app/core/models.ts` and the serde attributes in `agenteye-core` in lockstep, and change both in the same commit.
+- Shared parsing and filesystem logic lives in `scopesix-sources` helpers (`jsonl`, `fs`, `content`, `text`). Check there before writing another.
+- The Rust-to-TypeScript contract is the one place types are mirrored by hand (`SessionSummary` etc.). Keep the TypeScript in `ui/src/app/core/models.ts` and the serde attributes in `scopesix-core` in lockstep, and change both in the same commit.
 
 ### Maintainability
 

@@ -1,4 +1,4 @@
-# AgentEye
+# ScopeSix
 
 Desktop app for browsing, searching and monitoring AI agent sessions (Claude Code and Codex CLI for now). Windows and Linux. Read-only: it never modifies agent files.
 
@@ -28,11 +28,11 @@ Desktop app for browsing, searching and monitoring AI agent sessions (Claude Cod
 
 | Path | Purpose |
 | --- | --- |
-| `crates/agenteye-core` | Domain types and the `SessionSource` trait. No I/O. |
-| `crates/agenteye-sources` | Claude and Codex adapters, JSONL tailing, `Catalog`. |
-| `crates/agenteye-index` | SQLite FTS5 search index with incremental sync. |
-| `crates/agenteye-engine` | Application layer: discovery, search and background sync behind one `Engine`. |
-| `crates/agenteye-cli` | `agenteye` dev CLI: times each tier on your real data. |
+| `crates/scopesix-core` | Domain types and the `SessionSource` trait. No I/O. |
+| `crates/scopesix-sources` | Claude and Codex adapters, JSONL tailing, `Catalog`. |
+| `crates/scopesix-index` | SQLite FTS5 search index with incremental sync. |
+| `crates/scopesix-engine` | Application layer: discovery, search and background sync behind one `Engine`. |
+| `crates/scopesix-cli` | `scopesix` dev CLI: times each tier on your real data. |
 | `src-tauri` | Thin Tauri 2 shell; commands only translate to the crates above. |
 | `ui` | Angular frontend. |
 
@@ -80,9 +80,9 @@ npm test -- --watch=false --browsers=ChromeHeadless
 Scale spike on your own logs:
 
 ```sh
-cargo run --release -p agenteye-cli -- discover
-cargo run --release -p agenteye-cli -- index --db agenteye.db
-cargo run --release -p agenteye-cli -- search --db agenteye.db "some words"
+cargo run --release -p scopesix-cli -- discover
+cargo run --release -p scopesix-cli -- index --db scopesix.db
+cargo run --release -p scopesix-cli -- search --db scopesix.db "some words"
 ```
 
 Set `CLAUDE_CONFIG_DIR` / `CODEX_HOME` to override the default `~/.claude` / `~/.codex` locations.

@@ -57,10 +57,10 @@ describe('SessionList', () => {
 
   beforeEach(() => {
     refresh.calls.reset();
-    localStorage.removeItem('agenteye.settings');
+    localStorage.removeItem('scopesix.settings');
   });
 
-  afterEach(() => localStorage.removeItem('agenteye.settings'));
+  afterEach(() => localStorage.removeItem('scopesix.settings'));
 
   it('loads sessions on init and lists them without a View more button when they all fit', () => {
     const fixture = render([session('claude', 'fix build'), session('codex', 'add flag')]);

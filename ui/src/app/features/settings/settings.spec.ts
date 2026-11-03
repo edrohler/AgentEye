@@ -6,7 +6,7 @@ import { Settings } from './settings';
 
 describe('Settings', () => {
   beforeEach(() => {
-    localStorage.removeItem('agenteye.settings');
+    localStorage.removeItem('scopesix.settings');
     TestBed.configureTestingModule({
       imports: [Settings],
       providers: [provideZonelessChangeDetection()],
@@ -14,7 +14,7 @@ describe('Settings', () => {
   });
 
   afterEach(() => {
-    localStorage.removeItem('agenteye.settings');
+    localStorage.removeItem('scopesix.settings');
     document.documentElement.removeAttribute('data-theme');
   });
 

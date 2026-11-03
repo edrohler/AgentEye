@@ -1,10 +1,10 @@
 // Types mirrored by hand from the Rust crates. Keep them in lockstep with the serde attributes
-// in `agenteye-core`, `agenteye-index` and `agenteye-engine`, and change both in the same commit.
+// in `scopesix-core`, `scopesix-index` and `scopesix-engine`, and change both in the same commit.
 
-/** Mirrors `agenteye_core::AgentKind` (serialized lowercase). */
+/** Mirrors `scopesix_core::AgentKind` (serialized lowercase). */
 export type AgentKind = 'claude' | 'codex';
 
-/** Mirrors `agenteye_core::SessionSummary` (serialized camelCase). */
+/** Mirrors `scopesix_core::SessionSummary` (serialized camelCase). */
 export interface SessionSummary {
   readonly agent: AgentKind;
   readonly path: string;
@@ -17,7 +17,7 @@ export interface SessionSummary {
   readonly lastActivityMs: number;
 }
 
-/** Mirrors `agenteye_index::SearchHit` (serialized camelCase). */
+/** Mirrors `scopesix_index::SearchHit` (serialized camelCase). */
 export interface SearchHit {
   readonly agent: AgentKind;
   readonly path: string;
@@ -29,7 +29,7 @@ export interface SearchHit {
   readonly snippet: string;
 }
 
-/** Mirrors `agenteye_engine::IndexStatus` (serialized with a `state` tag). */
+/** Mirrors `scopesix_engine::IndexStatus` (serialized with a `state` tag). */
 export type IndexStatus =
   | { readonly state: 'idle' }
   | {

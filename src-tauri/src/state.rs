@@ -1,8 +1,8 @@
 use std::path::PathBuf;
 use std::sync::{Arc, Mutex, PoisonError};
 
-use agenteye_engine::{Engine, IndexStatus, Result};
-use agenteye_sources::Catalog;
+use scopesix_engine::{Engine, IndexStatus, Result};
+use scopesix_sources::Catalog;
 
 /// Shared application state, registered with Tauri once at startup.
 pub struct AppState {

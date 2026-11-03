@@ -243,7 +243,7 @@ $RECYCLE.BIN/
 
 # Custom rules (everything added below won't be overriden by 'Generate .gitignore File' if you use 'Update' option)
 
-# AgentEye is an application, so its lockfile is committed.
+# ScopeSix is an application, so its lockfile is committed.
 !Cargo.lock
 
 # Tauri generated schemas and bundles

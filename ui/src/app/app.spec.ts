@@ -25,7 +25,7 @@ describe('App', () => {
     fixture.detectChanges();
     const element = fixture.nativeElement as HTMLElement;
 
-    expect(element.querySelector('h1')?.textContent).toContain('AgentEye');
+    expect(element.querySelector('h1')?.textContent).toContain('ScopeSix');
     expect(element.querySelector('app-index-status')).toBeTruthy();
     const button = element.querySelector('a[aria-label="Open settings"]');
     expect(button?.getAttribute('href')).toMatch(/\/settings$/);

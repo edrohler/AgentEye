@@ -3,7 +3,7 @@ import { TestBed } from '@angular/core/testing';
 
 import { SettingsService } from './settings.service';
 
-const STORAGE_KEY = 'agenteye.settings';
+const STORAGE_KEY = 'scopesix.settings';
 
 function createService(): SettingsService {
   TestBed.configureTestingModule({ providers: [provideZonelessChangeDetection()] });
