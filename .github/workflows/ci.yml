@@ -29,10 +29,10 @@ jobs:
 
     steps:
       - name: Check out source
-        uses: actions/checkout@v5
+        uses: actions/checkout@v7
 
       - name: Set up Node.js
-        uses: actions/setup-node@v5
+        uses: actions/setup-node@v7
         with:
           node-version: 24
           cache: npm
@@ -60,7 +60,7 @@ jobs:
 
     steps:
       - name: Check out source
-        uses: actions/checkout@v5
+        uses: actions/checkout@v7
 
       - name: Install Linux build dependencies
         if: ${{ runner.os == 'Linux' }}
@@ -80,7 +80,7 @@ jobs:
       # The Tauri crate embeds the built UI when it is compiled, so the UI has to be built here too. Each job builds its own
       # copy rather than receiving one from the UI job, because nothing is uploaded or shared between jobs.
       - name: Set up Node.js
-        uses: actions/setup-node@v5
+        uses: actions/setup-node@v7
         with:
           node-version: 24
           cache: npm
@@ -115,7 +115,7 @@ jobs:
 
     steps:
       - name: Check out main
-        uses: actions/checkout@v5
+        uses: actions/checkout@v7
         with:
           fetch-depth: 0
           persist-credentials: false
@@ -161,12 +161,12 @@ jobs:
 
     steps:
       - name: Check out main
-        uses: actions/checkout@v5
+        uses: actions/checkout@v7
         with:
           persist-credentials: false
 
       - name: Set up Node.js
-        uses: actions/setup-node@v5
+        uses: actions/setup-node@v7
         with:
           node-version: 24
           cache: npm
@@ -226,7 +226,7 @@ jobs:
 
     steps:
       - name: Check out main
-        uses: actions/checkout@v5
+        uses: actions/checkout@v7
         with:
           fetch-depth: 0
           persist-credentials: false
